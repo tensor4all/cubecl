@@ -565,7 +565,7 @@ mod normal_channel {
     }
 }
 
-/// We implement a custom channel with automatic batching, no locking and
+/// We implement a custom channel with automatic batching and
 /// no allocation (most of the time, see [`task`] for more details.
 mod custom_channel {
     use crate::device::handle::{
@@ -580,7 +580,11 @@ mod custom_channel {
         sync::atomic::{AtomicPtr, AtomicU32, Ordering},
         time::Duration,
     };
-    use std::{sync::Arc, vec::Vec};
+    use std::{
+        sync::{Arc, OnceLock},
+        thread::Thread,
+        vec::Vec,
+    };
 
     /// Maximum number of [`Task`] that can be queued.
     pub const CHANNEL_MAX_TASK: usize = 32;
@@ -589,11 +593,8 @@ mod custom_channel {
     /// Gives a hot window to absorb back-to-back submits without any syscall.
     const SPIN_BUDGET_SERVER: u32 = 8192;
     /// Number of `thread::yield_now` calls after the spin budget is exhausted,
-    /// before the server drops to sleeping.
+    /// before the server parks until a batch is ready.
     const YIELD_BUDGET_SERVER: u32 = 64;
-    /// Sleep duration once both the spin and yield budgets are exhausted.
-    /// Bounds the wake-up latency from a fully idle state.
-    const SLEEP_STEP_SERVER: Duration = Duration::from_micros(150);
 
     /// The client has the buffer to fill plus we add a factor of two to account for the double
     /// buffering approach.
@@ -633,7 +634,7 @@ mod custom_channel {
             let mut server = Server::new(runner_id);
             let state = server.state.clone();
 
-            std::thread::Builder::new()
+            let thread = std::thread::Builder::new()
                 .name(std::format!(
                     "DS{}-{}-{}",
                     match runner_id.stage {
@@ -649,6 +650,10 @@ mod custom_channel {
                 })
                 .unwrap();
 
+            // Publish the wake target before any client can enqueue, even
+            // when the server is still initializing. Both registrations refer
+            // to the same thread; the server may have registered itself first.
+            state.thread.get_or_init(|| thread.thread().clone());
             Self { state }
         }
 
@@ -671,7 +676,7 @@ mod custom_channel {
                 }
 
                 self.state.init_task_at(index, func);
-                self.state.enqueued_count.fetch_add(1, Ordering::SeqCst);
+                self.state.publish_tasks(1);
                 return Ok(());
             }
         }
@@ -700,9 +705,7 @@ mod custom_channel {
             }
 
             let actual_added = index_end - index_start;
-            self.state
-                .enqueued_count
-                .fetch_add(actual_added as u32, Ordering::SeqCst);
+            self.state.publish_tasks(actual_added as u32);
         }
     }
 
@@ -716,11 +719,25 @@ mod custom_channel {
         available_index: AtomicU32,
         /// Number of tasks successfully written and ready for processing.
         enqueued_count: AtomicU32,
+        /// Registered before the server's first queue check.
+        thread: OnceLock<Thread>,
         /// The runner id (for debugging purposes).
         runner_id: RunnerId,
     }
 
     impl State {
+        fn publish_tasks(&self, count: u32) {
+            let previous = self.enqueued_count.fetch_add(count, Ordering::SeqCst);
+            if previous + count == CHANNEL_MAX_TASK as u32
+                && let Some(thread) = self.thread.get()
+            {
+                // The token persists if publication races with park().
+                thread.unpark();
+            }
+            // Before registration, the server has not checked the queue
+            // yet and will observe a ready batch on its first check.
+        }
+
         /// Initializes the task at `index` in the current queue with `func`.
         /// Exclusive access per slot is guaranteed by `available_index.fetch_add`.
         fn init_task_at<F: FnOnce() + Send + 'static>(&self, index: usize, func: F) {
@@ -756,6 +773,9 @@ mod custom_channel {
         }
     }
 
+    #[cfg(test)]
+    mod tests;
+
     /// The server-side runner that processes tasks.
     struct Server {
         state: Arc<State>,
@@ -773,6 +793,7 @@ mod custom_channel {
                 queue_ptr: AtomicPtr::new(buffers[0].tasks.as_mut_ptr()),
                 available_index: AtomicU32::new(0),
                 enqueued_count: AtomicU32::new(0),
+                thread: OnceLock::new(),
                 runner_id,
             });
 
@@ -786,6 +807,7 @@ mod custom_channel {
 
         /// Main execution loop for the device thread.
         fn start(&mut self) {
+            self.state.thread.get_or_init(std::thread::current);
             let mut idle_count: u32 = 0;
             loop {
                 if self.ready_to_execute {
@@ -806,7 +828,10 @@ mod custom_channel {
                 } else if idle_count < SPIN_BUDGET_SERVER + YIELD_BUDGET_SERVER {
                     std::thread::yield_now();
                 } else {
-                    std::thread::sleep(SLEEP_STEP_SERVER);
+                    // INVARIANT: publishers leave an unpark token when a full
+                    // batch becomes ready, including between this loop's
+                    // queue check and park. Always recheck after waking.
+                    std::thread::park();
                 }
                 idle_count = idle_count.saturating_add(1);
             }

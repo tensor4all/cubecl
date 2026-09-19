@@ -2,6 +2,8 @@
 extend-ignore-identifiers-re = ["CU_DEVICE_ATTRIBUTE_*", "HSA_*"]
 
 [default.extend-identifiers]
+# Existing CUDA_MEMCPY2D descriptor shorthand, not a misspelled word.
+cpy = "cpy"
 Olt = "Olt"
 UE4M3 = "UE4M3"
 UE8M0 = "UE8M0"

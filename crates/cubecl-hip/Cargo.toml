@@ -41,17 +41,17 @@ tracing = [
 log = { workspace = true }
 tracing = { workspace = true, features = ["attributes"], optional = true }
 
-cubecl-common = { package = "t4a-cubecl-common", path = "../cubecl-common", version = "0.10.0", features = [
+cubecl-common = { package = "t4a-cubecl-common", path = "../cubecl-common", version = "0.10.1", features = [
     "compilation-cache",
     "std",
     "hash",
 ] }
-cubecl-core = { package = "t4a-cubecl-core", path = "../cubecl-core", version = "0.10.0", default-features = false }
-cubecl-cpp = { package = "t4a-cubecl-cpp", path = "../cubecl-cpp", version = "0.10.0", default-features = false, features = [
+cubecl-core = { package = "t4a-cubecl-core", path = "../cubecl-core", version = "0.10.1", default-features = false }
+cubecl-cpp = { package = "t4a-cubecl-cpp", path = "../cubecl-cpp", version = "0.10.1", default-features = false, features = [
     "hip",
 ] }
 cubecl-hip-sys = { version = "7.1.5280200" }
-cubecl-runtime = { package = "t4a-cubecl-runtime", path = "../cubecl-runtime", version = "0.10.0", default-features = false, features = [
+cubecl-runtime = { package = "t4a-cubecl-runtime", path = "../cubecl-runtime", version = "0.10.1", default-features = false, features = [
     "channel-mutex",
 ] }
 
@@ -63,10 +63,10 @@ paste = { workspace = true }
 serde = { workspace = true }
 
 [dev-dependencies]
-cubecl-core = { package = "t4a-cubecl-core", path = "../cubecl-core", version = "0.10.0", features = [
+cubecl-core = { package = "t4a-cubecl-core", path = "../cubecl-core", version = "0.10.1", features = [
     "export_tests",
 ] }
-cubecl-std = { package = "t4a-cubecl-std", path = "../cubecl-std", version = "0.10.0", features = [
+cubecl-std = { package = "t4a-cubecl-std", path = "../cubecl-std", version = "0.10.1", features = [
     "export_tests",
 ] }
 pretty_assertions = { workspace = true }

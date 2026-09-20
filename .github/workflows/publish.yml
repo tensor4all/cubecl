@@ -1,5 +1,12 @@
 name: publish
 
+# `tag-validation` stays off: the shared publish-crate workflow compares the
+# git tag version against `cargo xtask publish`'s idea of the manifest version,
+# and the current toolchain reports that as `<name>@<version>`, so the check
+# rejects a correct tag ("Git tag version (0.10.1) does not match Cargo.toml
+# version (t4a-cubecl-zspace@0.10.1)"). The release tag and the workspace
+# version are kept in step by the release commit instead.
+
 on:
   push:
     tags:
@@ -17,6 +24,7 @@ jobs:
     uses: tracel-ai/github-actions/.github/workflows/publish-crate.yml@v8
     with:
       crate: t4a-cubecl-zspace
+      tag-validation: false
       dry-run-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run-only || false }}
     secrets:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
@@ -25,6 +33,7 @@ jobs:
     uses: tracel-ai/github-actions/.github/workflows/publish-crate.yml@v8
     with:
       crate: t4a-cubecl-common
+      tag-validation: false
       dry-run-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run-only || false }}
     secrets:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
@@ -33,6 +42,7 @@ jobs:
     uses: tracel-ai/github-actions/.github/workflows/publish-crate.yml@v8
     with:
       crate: t4a-cubecl-macros-internal
+      tag-validation: false
       dry-run-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run-only || false }}
     secrets:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
@@ -44,6 +54,7 @@ jobs:
     uses: tracel-ai/github-actions/.github/workflows/publish-crate.yml@v8
     with:
       crate: t4a-cubecl-ir
+      tag-validation: false
       dry-run-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run-only || false }}
     secrets:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
@@ -56,6 +67,7 @@ jobs:
     uses: tracel-ai/github-actions/.github/workflows/publish-crate.yml@v8
     with:
       crate: t4a-cubecl-runtime
+      tag-validation: false
       dry-run-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run-only || false }}
     secrets:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
@@ -66,6 +78,7 @@ jobs:
     uses: tracel-ai/github-actions/.github/workflows/publish-crate.yml@v8
     with:
       crate: t4a-cubecl-macros
+      tag-validation: false
       dry-run-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run-only || false }}
     secrets:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
@@ -80,6 +93,7 @@ jobs:
     uses: tracel-ai/github-actions/.github/workflows/publish-crate.yml@v8
     with:
       crate: t4a-cubecl-core
+      tag-validation: false
       dry-run-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run-only || false }}
     secrets:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
@@ -92,6 +106,7 @@ jobs:
     uses: tracel-ai/github-actions/.github/workflows/publish-crate.yml@v8
     with:
       crate: t4a-cubecl-opt
+      tag-validation: false
       dry-run-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run-only || false }}
     secrets:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
@@ -105,6 +120,7 @@ jobs:
     uses: tracel-ai/github-actions/.github/workflows/publish-crate.yml@v8
     with:
       crate: t4a-cubecl-cpp
+      tag-validation: false
       dry-run-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run-only || false }}
     secrets:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
@@ -117,6 +133,7 @@ jobs:
     uses: tracel-ai/github-actions/.github/workflows/publish-crate.yml@v8
     with:
       crate: t4a-cubecl-std
+      tag-validation: false
       dry-run-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run-only || false }}
     secrets:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
@@ -132,6 +149,7 @@ jobs:
     uses: tracel-ai/github-actions/.github/workflows/publish-crate.yml@v8
     with:
       crate: t4a-cubecl-wgpu
+      tag-validation: false
       dry-run-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run-only || false }}
     secrets:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
@@ -146,6 +164,7 @@ jobs:
     uses: tracel-ai/github-actions/.github/workflows/publish-crate.yml@v8
     with:
       crate: t4a-cubecl-cuda
+      tag-validation: false
       dry-run-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run-only || false }}
     secrets:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
@@ -161,6 +180,7 @@ jobs:
     uses: tracel-ai/github-actions/.github/workflows/publish-crate.yml@v8
     with:
       crate: t4a-cubecl
+      tag-validation: false
       dry-run-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run-only || false }}
     secrets:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}

@@ -31,11 +31,11 @@ std = []
 tracing = ["cubecl-common/tracing"]
 
 [dependencies]
-cubecl-common = { package = "t4a-cubecl-common", path = "../cubecl-common", version = "0.10.0", default-features = false, features = [
+cubecl-common = { package = "t4a-cubecl-common", path = "../cubecl-common", version = "0.10.1", default-features = false, features = [
     "fp4",
     "fp8",
 ] }
-cubecl-macros-internal = { package = "t4a-cubecl-macros-internal", path = "../cubecl-macros-internal", version = "0.10.0" }
+cubecl-macros-internal = { package = "t4a-cubecl-macros-internal", path = "../cubecl-macros-internal", version = "0.10.1" }
 
 derive-new = { workspace = true }
 derive_more = { workspace = true, features = ["from"] }

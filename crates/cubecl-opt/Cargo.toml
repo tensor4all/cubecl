@@ -27,9 +27,9 @@ tracing = ["cubecl-common/tracing", "cubecl-ir/tracing", "cubecl-core/tracing"]
 
 
 [dependencies]
-cubecl-common = { package = "t4a-cubecl-common", path = "../cubecl-common", version = "0.10.0", default-features = false }
-cubecl-core = { package = "t4a-cubecl-core", path = "../cubecl-core", version = "0.10.0", default-features = false }
-cubecl-ir = { package = "t4a-cubecl-ir", path = "../cubecl-ir", version = "0.10.0", default-features = false }
+cubecl-common = { package = "t4a-cubecl-common", path = "../cubecl-common", version = "0.10.1", default-features = false }
+cubecl-core = { package = "t4a-cubecl-core", path = "../cubecl-core", version = "0.10.1", default-features = false }
+cubecl-ir = { package = "t4a-cubecl-ir", path = "../cubecl-ir", version = "0.10.1", default-features = false }
 
 float-ord = "0.3"
 log = "0.4"

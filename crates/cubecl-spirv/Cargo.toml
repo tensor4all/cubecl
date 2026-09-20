@@ -34,9 +34,9 @@ tracing = [
 
 [dependencies]
 bitflags = { workspace = true }
-cubecl-common = { package = "t4a-cubecl-common", path = "../cubecl-common", version = "0.10.0", default-features = false }
-cubecl-core = { package = "t4a-cubecl-core", path = "../cubecl-core", version = "0.10.0" }
-cubecl-runtime = { package = "t4a-cubecl-runtime", path = "../cubecl-runtime", version = "0.10.0", default-features = false, features = [
+cubecl-common = { package = "t4a-cubecl-common", path = "../cubecl-common", version = "0.10.1", default-features = false }
+cubecl-core = { package = "t4a-cubecl-core", path = "../cubecl-core", version = "0.10.1" }
+cubecl-runtime = { package = "t4a-cubecl-runtime", path = "../cubecl-runtime", version = "0.10.1", default-features = false, features = [
     "channel-mutex",
 ] }
 half = { workspace = true }
@@ -47,4 +47,4 @@ hashbrown = { workspace = true }
 rspirv = { workspace = true, features = ["serialize", "deserialize"] }
 
 # Optimizer
-cubecl-opt = { package = "t4a-cubecl-opt", path = "../cubecl-opt", version = "0.10.0" }
+cubecl-opt = { package = "t4a-cubecl-opt", path = "../cubecl-opt", version = "0.10.1" }

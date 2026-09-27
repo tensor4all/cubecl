@@ -75,6 +75,10 @@ impl<M: DialectWmmaCompiler<Self>> DialectIncludes<Self> for CudaDialect<M> {
                 "__device__ __host__ inline cuDoubleComplex operator-(cuDoubleComplex a) { return make_cuDoubleComplex(-cuCreal(a), -cuCimag(a)); }\n",
                 "__device__ __host__ inline bool operator==(cuDoubleComplex a, cuDoubleComplex b) { return cuCreal(a)==cuCreal(b) && cuCimag(a)==cuCimag(b); }\n",
                 "__device__ __host__ inline bool operator!=(cuDoubleComplex a, cuDoubleComplex b) { return !(a==b); }\n",
+                "__device__ __host__ inline cuFloatComplex& operator+=(cuFloatComplex& a, cuFloatComplex b) { a = cuCaddf(a, b); return a; }\n",
+                "__device__ __host__ inline cuFloatComplex& operator*=(cuFloatComplex& a, cuFloatComplex b) { a = cuCmulf(a, b); return a; }\n",
+                "__device__ __host__ inline cuDoubleComplex& operator+=(cuDoubleComplex& a, cuDoubleComplex b) { a = cuCadd(a, b); return a; }\n",
+                "__device__ __host__ inline cuDoubleComplex& operator*=(cuDoubleComplex& a, cuDoubleComplex b) { a = cuCmul(a, b); return a; }\n",
             ))?;
             f.write_str(
                 r#"__device__ __host__ inline float cubecl_abs(cuFloatComplex a) {
@@ -708,10 +712,22 @@ impl<M: DialectWmmaCompiler<Self>> DialectInstructions<Self> for CudaDialect<M> 
     fn compile_warp_shuffle_xor(
         f: &mut std::fmt::Formatter<'_>,
         var: &str,
-        _elem: &Elem<Self>,
+        elem: &Elem<Self>,
         offset: &str,
     ) -> std::fmt::Result {
-        write!(f, "__shfl_xor_sync(-1, {var}, {offset})")
+        // cuComplex types are plain structs without an `__shfl_xor_sync`
+        // overload, so shuffle the real and imaginary lanes separately.
+        match elem {
+            Elem::CF32 => write!(
+                f,
+                "make_cuFloatComplex(__shfl_xor_sync(-1, {var}.x, {offset}), __shfl_xor_sync(-1, {var}.y, {offset}))"
+            ),
+            Elem::CF64 => write!(
+                f,
+                "make_cuDoubleComplex(__shfl_xor_sync(-1, {var}.x, {offset}), __shfl_xor_sync(-1, {var}.y, {offset}))"
+            ),
+            _ => write!(f, "__shfl_xor_sync(-1, {var}, {offset})"),
+        }
     }
     fn compile_warp_shuffle_up(
         f: &mut std::fmt::Formatter<'_>,
@@ -871,5 +887,51 @@ impl<M: DialectWmmaCompiler<Self>> DialectProcessors<Self> for CudaDialect<M> {
             Box::new(CudaMmaProcessor),
             Box::new(SaturatingArithmeticProcessor::new(false)),
         ]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        cuda::mma::PtxWmmaCompiler,
+        shared::{Elem, Item, Variable, WarpInstruction},
+    };
+
+    use super::CudaDialect;
+
+    type Dialect = CudaDialect<PtxWmmaCompiler>;
+
+    fn shuffle_xor(elem: Elem<Dialect>) -> String {
+        WarpInstruction::<Dialect>::ShuffleXor {
+            input: Variable::Named {
+                name: "input",
+                item: Item::scalar(elem, false),
+            },
+            mask: Variable::Named {
+                name: "mask",
+                item: Item::scalar(Elem::U32, false),
+            },
+            out: Variable::Named {
+                name: "output",
+                item: Item::scalar(elem, false),
+            },
+        }
+        .to_string()
+    }
+
+    #[test]
+    fn cuda_complex_shuffle_xor_shuffles_components_separately() {
+        assert_eq!(
+            shuffle_xor(Elem::CF64),
+            "output = { make_cuDoubleComplex(__shfl_xor_sync(-1, input.x, mask), __shfl_xor_sync(-1, input.y, mask)) };\n"
+        );
+        assert_eq!(
+            shuffle_xor(Elem::CF32),
+            "output = { make_cuFloatComplex(__shfl_xor_sync(-1, input.x, mask), __shfl_xor_sync(-1, input.y, mask)) };\n"
+        );
+        assert_eq!(
+            shuffle_xor(Elem::F32),
+            "output = { __shfl_xor_sync(-1, input, mask) };\n"
+        );
     }
 }

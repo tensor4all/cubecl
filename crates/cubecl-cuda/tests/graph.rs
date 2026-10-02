@@ -5,7 +5,8 @@ use cubecl_core as cubecl;
 use cubecl_core::prelude::*;
 use cubecl_core::runtime_tests::capture_status;
 use cubecl_core::server::Handle;
-use cubecl_cuda::CudaRuntime;
+use cubecl_cuda::{CudaRuntime, ffi_interop::CudaServer};
+use cubecl_environment::stream::StreamId;
 use cubecl_server::runtime::Runtime;
 use std::sync::Mutex;
 
@@ -16,6 +17,129 @@ use std::sync::Mutex;
 /// per device, as in real use. Serialize the tests instead of relying on
 /// `--test-threads 1`.
 static CAPTURE_LOCK: Mutex<()> = Mutex::new(());
+
+#[test]
+fn raw_stream_is_stable_for_one_logical_stream() {
+    let _guard = CAPTURE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let client = CudaRuntime::client(&Default::default());
+    let stream_id = StreamId::current();
+    let raw = || {
+        client
+            .with_server(move |server: &mut CudaServer| {
+                server.raw_stream(stream_id).map(|s| s as usize)
+            })
+            .expect("CUDA server must be available")
+            .expect("stream must be available")
+    };
+    assert_eq!(raw(), raw());
+}
+
+#[test]
+fn with_server_resumes_backend_panic() {
+    let _guard = CAPTURE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let client = CudaRuntime::client(&Default::default());
+    let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        client.with_server(|_: &mut CudaServer| panic!("backend closure failed"));
+    }));
+    assert!(caught.is_err());
+    assert!(client.with_server(|_: &mut CudaServer| ()).is_some());
+}
+
+#[cfg(feature = "cpp")]
+#[cube(launch)]
+fn sum_complex(output: &mut Tensor<num_complex::Complex32>) {
+    let value = output[UNIT_POS as usize];
+    let sum = plane_sum(value);
+    if UNIT_POS == 0 {
+        output[0] = sum;
+    }
+}
+
+#[cfg(feature = "cpp")]
+#[test]
+fn cuda_complex_plane_sum_shuffles_both_parts() {
+    let _guard = CAPTURE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let client = CudaRuntime::client(&Default::default());
+    let scalars: Vec<f32> = (0..32)
+        .flat_map(|i| [i as f32 + 1.0, -(i as f32)])
+        .collect();
+    let handle = client.create_from_slice(f32::as_bytes(&scalars));
+    unsafe {
+        sum_complex::launch(
+            &client,
+            CubeCount::Static(1, 1, 1),
+            CubeDim::new_1d(32),
+            TensorArg::from_raw_parts(handle.clone(), [1].into(), [32].into()),
+        );
+    }
+    let out = client.read_one(handle).expect("read CUDA sum");
+    assert_eq!(&f32::from_bytes(&out)[..2], &[528.0, -496.0]);
+}
+
+#[cfg(feature = "cpp")]
+#[cube(launch)]
+fn prod_complex(output: &mut Tensor<num_complex::Complex32>) {
+    let value = output[UNIT_POS as usize];
+    let product = plane_prod(value);
+    if UNIT_POS == 0 {
+        output[0] = product;
+    }
+}
+
+#[cfg(feature = "cpp")]
+#[test]
+fn cuda_complex_plane_product_multiplies_both_parts() {
+    let _guard = CAPTURE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let client = CudaRuntime::client(&Default::default());
+    let mut scalars = vec![0.0f32; 64];
+    for i in 0..32 {
+        scalars[2 * i] = 1.0;
+    }
+    scalars[1] = 1.0;
+    scalars[3] = 2.0;
+    let handle = client.create_from_slice(f32::as_bytes(&scalars));
+    unsafe {
+        prod_complex::launch(
+            &client,
+            CubeCount::Static(1, 1, 1),
+            CubeDim::new_1d(32),
+            TensorArg::from_raw_parts(handle.clone(), [1].into(), [32].into()),
+        );
+    }
+    let out = client.read_one(handle).expect("read CUDA C32 product");
+    assert_eq!(&f32::from_bytes(&out)[..2], &[-1.0, 3.0]);
+}
+
+#[cfg(feature = "cpp")]
+#[cube(launch)]
+fn sum_complex64(output: &mut Tensor<num_complex::Complex64>) {
+    let value = output[UNIT_POS as usize];
+    let sum = plane_sum(value);
+    if UNIT_POS == 0 {
+        output[0] = sum;
+    }
+}
+
+#[cfg(feature = "cpp")]
+#[test]
+fn cuda_complex64_plane_sum_shuffles_both_parts() {
+    let _guard = CAPTURE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let client = CudaRuntime::client(&Default::default());
+    let scalars: Vec<f64> = (0..32)
+        .flat_map(|i| [i as f64 + 1.0, -(i as f64)])
+        .collect();
+    let handle = client.create_from_slice(f64::as_bytes(&scalars));
+    unsafe {
+        sum_complex64::launch(
+            &client,
+            CubeCount::Static(1, 1, 1),
+            CubeDim::new_1d(32),
+            TensorArg::from_raw_parts(handle.clone(), [1].into(), [32].into()),
+        );
+    }
+    let out = client.read_one(handle).expect("read CUDA C64 sum");
+    assert_eq!(&f64::from_bytes(&out)[..2], &[528.0, -496.0]);
+}
 
 #[cube(launch)]
 fn add_one(input: &[f32], output: &mut [f32]) {

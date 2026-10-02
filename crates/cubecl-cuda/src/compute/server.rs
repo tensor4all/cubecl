@@ -526,6 +526,21 @@ impl WriteScoped for CudaServer {
 }
 
 impl CudaServer {
+    /// Return the CUDA stream used for this logical stream ID.
+    ///
+    /// Modified from tensor4all/cubecl `ffc017d54` (MIT OR Apache-2.0)
+    /// to use the upstream command stream selector.
+    ///
+    /// The server owns this handle. It stays valid while this server is alive;
+    /// callers must not destroy it. This only selects the stream: it does not
+    /// flush queued `CubeCL` launches, synchronize allocations, or wait for external
+    /// work. Call `Client::flush()` before entering the server closure if earlier
+    /// `CubeCL` launches must be submitted first. Preserve buffer lifetimes and
+    /// same-stream ordering through completion of the external CUDA work.
+    pub fn raw_stream(&mut self, stream_id: StreamId) -> Result<CUstream, ServerError> {
+        Ok(self.command_no_inputs(stream_id).stream().sys)
+    }
+
     /// Create a new cuda server.
     pub(crate) fn new(
         ctx: CudaContext,

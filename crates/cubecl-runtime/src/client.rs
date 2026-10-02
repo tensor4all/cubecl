@@ -1293,6 +1293,26 @@ impl Client {
             .unwrap_or_resume()
     }
 
+    /// Run a backend-specific operation on the device server.
+    ///
+    /// Modified from tensor4all/cubecl `ffc017d54` (MIT OR Apache-2.0)
+    /// for upstream's nongeneric device server and panic propagation.
+    ///
+    /// This blocks until the closure returns. Do not call this client's methods
+    /// from the closure: the device server is already borrowed. A raw resource
+    /// obtained here remains owned by the server and must not outlive it.
+    /// Returns `None` when this client uses a different server type. A panic
+    /// inside the closure is resumed on the caller thread.
+    pub fn with_server<S: Server, T: Send>(&self, f: impl FnOnce(&mut S) -> T + Send) -> Option<T> {
+        self.device
+            .submit_blocking(move |server| {
+                (server as &mut dyn core::any::Any)
+                    .downcast_mut::<S>()
+                    .map(f)
+            })
+            .unwrap_or_resume()
+    }
+
     /// Flush all outstanding commands.
     pub fn flush(&self) -> Result<(), ServerError> {
         let stream_id = self.stream_id();

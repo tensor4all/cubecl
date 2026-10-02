@@ -11,6 +11,15 @@ pub use compiler::{CudaCompilationOptions, CudaCompiler, CudaRepresentation};
 pub use device::*;
 pub use runtime::*;
 
+/// CUDA server and resource types for external-library interop.
+///
+/// Raw pointers and streams remain owned by `CubeCL`. Callers must keep their
+/// allocations alive and establish CUDA ordering before using them externally.
+pub mod ffi_interop {
+    pub use crate::compute::CudaServer;
+    pub use crate::compute::storage::gpu::GpuResource;
+}
+
 pub mod install {
     use std::path::PathBuf;
 

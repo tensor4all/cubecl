@@ -29,6 +29,7 @@ use cubecl_runtime::{
     allocator::PitchedMemoryLayoutPolicy,
     compiler::CubeTask,
     config::{CubeClRuntimeConfig, RuntimeConfig},
+    id::KernelId,
     logging::ServerLogger,
     memory_management::{ManagedMemoryHandle, MemoryAllocationMode, MemoryUsage},
     server::ComputeServer,
@@ -554,6 +555,19 @@ impl CudaServer {
     ) -> Result<cudarc::driver::sys::CUstream, ServerError> {
         let mut resolved = self.streams.resolve(stream_id, [].into_iter(), false)?;
         Ok(resolved.current().sys)
+    }
+
+    /// Returns the ids of every kernel module this server has loaded, whether it
+    /// was compiled with NVRTC or loaded from the persistent PTX cache.
+    ///
+    /// Each distinct [`KernelId`] (kernel type, compile-time arguments, cube dim
+    /// and execution mode) is loaded once and kept for the server's lifetime, so
+    /// this is the set of specializations a workload has paid a compilation for.
+    /// It is a read-only diagnostic: consumers use it to check that values passed
+    /// as runtime kernel arguments do not create new specializations. Filter by
+    /// [`KernelId::stable_format`], which starts with the kernel type name.
+    pub fn compiled_kernel_ids(&self) -> Vec<KernelId> {
+        self.ctx.module_names.keys().cloned().collect()
     }
 
     /// Create a new cuda server.

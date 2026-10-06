@@ -209,40 +209,6 @@ impl<R: Runtime> ComputeClient<R> {
             .unwrap()
     }
 
-    fn do_create_from_slices(
-        &self,
-        descriptors: Vec<MemoryLayoutDescriptor>,
-        slices: Vec<Vec<u8>>,
-    ) -> Result<Vec<MemoryLayout>, IoError> {
-        let stream_id = self.stream_id();
-        let (handle_base, layouts) = self.utilities.layout_policy.apply(stream_id, &descriptors);
-
-        let descriptors = descriptors
-            .into_iter()
-            .zip(layouts.iter())
-            .zip(slices)
-            .map(|((desc, alloc), data)| {
-                (
-                    CopyDescriptor::new(
-                        alloc.memory.clone().binding(),
-                        desc.shape,
-                        alloc.strides.clone(),
-                        desc.elem_size,
-                    ),
-                    Bytes::from_bytes_vec(data.to_vec()),
-                )
-            })
-            .collect::<Vec<_>>();
-
-        let (size, memory) = (handle_base.size(), handle_base.memory);
-        self.device.submit(move |server| {
-            server.initialize_memory(memory, size, stream_id);
-            server.write(descriptors, stream_id);
-        });
-
-        Ok(layouts)
-    }
-
     fn do_create(
         &self,
         descriptors: Vec<MemoryLayoutDescriptor>,
@@ -265,7 +231,9 @@ impl<R: Runtime> ComputeClient<R> {
                         layout.strides.clone(),
                         desc.elem_size,
                     ),
-                    Bytes::from_bytes_vec(data.to_vec()),
+                    // `data` is already owned: hand it to the server as is instead of
+                    // cloning it (and re-aligning the clone) on every upload.
+                    data,
                 )
             })
             .collect::<Vec<_>>();
@@ -287,13 +255,13 @@ impl<R: Runtime> ComputeClient<R> {
     pub fn create_from_slice(&self, slice: &[u8]) -> Handle {
         let shape: Shape = [slice.len()].into();
 
-        self.do_create_from_slices(
+        self.do_create(
             vec![MemoryLayoutDescriptor::new(
                 MemoryLayoutStrategy::Contiguous,
                 shape,
                 1,
             )],
-            vec![slice.to_vec()],
+            vec![staged_bytes(slice)],
         )
         .unwrap()
         .remove(0)
@@ -381,13 +349,13 @@ impl<R: Runtime> ComputeClient<R> {
         shape: Shape,
         elem_size: usize,
     ) -> MemoryLayout {
-        self.do_create_from_slices(
+        self.do_create(
             vec![MemoryLayoutDescriptor::new(
                 MemoryLayoutStrategy::Optimized,
                 shape,
                 elem_size,
             )],
-            vec![slice.to_vec()],
+            vec![staged_bytes(slice)],
         )
         .unwrap()
         .remove(0)
@@ -433,11 +401,11 @@ impl<R: Runtime> ComputeClient<R> {
         let mut data = Vec::with_capacity(descriptors.len());
         let mut descriptors_ = Vec::with_capacity(descriptors.len());
         for (a, b) in descriptors {
-            data.push(b.to_vec());
+            data.push(staged_bytes(b));
             descriptors_.push(a);
         }
 
-        self.do_create_from_slices(descriptors_, data).unwrap()
+        self.do_create(descriptors_, data).unwrap()
     }
 
     /// Reserves all `shapes` in a single storage buffer, copies the corresponding `data` into each
@@ -1065,5 +1033,51 @@ impl<R: Runtime> ComputeClient<R> {
         let num_candidates = max.trailing_zeros() + 1;
 
         (0..num_candidates).map(|i| 2usize.pow(i)).rev()
+    }
+}
+
+/// Copy a borrowed host slice exactly once into owned, `MAX_ALIGN`-aligned [`Bytes`].
+///
+/// The `*_from_slice` entry points need this staging copy: the server reads the
+/// data asynchronously after the call returns, so it cannot keep borrowing the
+/// caller's buffer. Writing straight into an aligned allocation avoids the extra
+/// `Vec<u8>` round trip that [`Bytes::from_bytes_vec`] would realign (and copy)
+/// again. Callers that already own their data should use
+/// [`ComputeClient::create`] with [`Bytes::from_elems`], which copies nothing.
+fn staged_bytes(slice: &[u8]) -> Bytes {
+    // An empty `u128` vector carries the maximum alignment, so the single
+    // `extend_from_byte_slice` below allocates directly at that alignment.
+    let mut bytes = Bytes::from_elems(Vec::<u128>::new());
+    bytes.extend_from_byte_slice(slice);
+    bytes
+}
+
+#[cfg(test)]
+mod staged_bytes_tests {
+    use super::staged_bytes;
+    use cubecl_common::bytes::Bytes;
+
+    #[test]
+    fn staged_bytes_copies_once_into_max_aligned_storage() {
+        for len in [0usize, 1, 7, 16, 17, 4096, 65_537] {
+            let src: alloc::vec::Vec<u8> = (0..len).map(|i| (i * 31 + 7) as u8).collect();
+            let staged = staged_bytes(&src);
+            assert_eq!(&staged[..], &src[..], "len {len}");
+            assert_eq!(staged.len(), len);
+            assert!(staged.align() >= core::mem::align_of::<u128>(), "len {len}");
+            if len > 0 {
+                assert_ne!(staged.as_ptr(), src.as_ptr(), "staging must own its copy");
+            }
+        }
+    }
+
+    #[test]
+    fn owned_bytes_keep_their_allocation() {
+        // `create(Bytes::from_elems(vec))` is the zero-copy upload path: the
+        // `Bytes` keeps the vector's allocation.
+        let data = alloc::vec![1.0f64, 2.0, 3.0];
+        let ptr = data.as_ptr() as *const u8;
+        let bytes = Bytes::from_elems(data);
+        assert_eq!(bytes.as_ptr(), ptr);
     }
 }

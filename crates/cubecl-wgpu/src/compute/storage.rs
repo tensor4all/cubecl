@@ -95,6 +95,9 @@ struct AllocationAccess {
 }
 
 impl AllocationAccess {
+    // `fetch_update` is deprecated in favour of `try_update` on current stable,
+    // which postdates the crate's MSRV.
+    #[allow(deprecated)]
     fn new() -> Self {
         let allocation_id = NEXT_ALLOCATION_ID
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {

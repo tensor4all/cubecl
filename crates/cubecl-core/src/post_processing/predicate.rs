@@ -1,5 +1,4 @@
 use alloc::vec::Vec;
-use core::{f32, f64};
 
 use crate as cubecl;
 use cubecl_ir::{

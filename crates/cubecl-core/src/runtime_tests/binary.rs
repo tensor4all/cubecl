@@ -1,7 +1,5 @@
 #![allow(clippy::approx_constant)]
 
-use core::f32;
-
 use core::fmt::Display;
 
 use crate::{self as cubecl, as_type, stub::Lazy};

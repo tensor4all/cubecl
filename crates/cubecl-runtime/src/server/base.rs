@@ -387,6 +387,17 @@ where
     /// Flush all outstanding tasks in the server.
     fn flush(&mut self, stream_id: StreamId) -> Result<(), ServerError>;
 
+    /// Report the errors raised by tasks already submitted on `stream_id`, without waiting for
+    /// device work.
+    ///
+    /// [`Self::flush`] also retires staged host bytes, which arms a fence that the next flush
+    /// synchronizes; a caller that must observe producer failures but must not wait for device
+    /// completion (a host-side publisher ordering a later copy, for example) uses this instead.
+    /// Backends without a per-stream error queue have nothing to report and keep the default.
+    fn check_errors(&mut self, _stream_id: StreamId) -> Result<(), ServerError> {
+        Ok(())
+    }
+
     /// The current memory usage of the server.
     fn memory_usage(&mut self, stream_id: StreamId) -> Result<MemoryUsage, ServerError>;
 

@@ -769,6 +769,28 @@ impl<R: Runtime> ComputeClient<R> {
             .unwrap()
     }
 
+    /// Report the errors raised by tasks already submitted on the current stream, without waiting
+    /// for device work.
+    ///
+    /// Unlike [`Self::flush`], this neither retires staged host bytes nor arms a fence, so it
+    /// cannot make a later submission wait for device completion. It still dispatches the host
+    /// task queue, so work queued before it has reached the stream when it returns.
+    ///
+    /// # Errors
+    ///
+    /// Returns the accumulated [`ServerError`]s for the stream, or a dispatch error when the
+    /// device thread cannot be reached.
+    pub fn check_errors(&self) -> Result<(), ServerError> {
+        let stream_id = self.stream_id();
+
+        self.device
+            .submit_blocking(move |server| server.check_errors(stream_id))
+            .map_err(|err| ServerError::Generic {
+                reason: format!("device thread unreachable while checking server errors: {err:?}"),
+                backtrace: BackTrace::capture(),
+            })?
+    }
+
     /// Wait for the completion of every task in the server.
     pub fn sync(&self) -> DynFut<Result<(), ServerError>> {
         let stream_id = self.stream_id();

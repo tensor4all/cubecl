@@ -168,6 +168,19 @@ impl ComputeServer for CudaServer {
         }
     }
 
+    fn check_errors(&mut self, stream_id: StreamId) -> Result<(), ServerError> {
+        let errors = self.flush_errors(stream_id);
+
+        if errors.is_empty() {
+            return Ok(());
+        }
+
+        Err(ServerError::ServerUnhealthy {
+            errors,
+            backtrace: BackTrace::capture(),
+        })
+    }
+
     fn flush(&mut self, stream_id: StreamId) -> Result<(), ServerError> {
         let mut command = self.command_no_inputs(
             stream_id,

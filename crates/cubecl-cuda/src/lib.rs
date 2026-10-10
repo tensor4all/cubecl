@@ -92,4 +92,43 @@ mod tests {
     cubecl_core::testgen_complex_compare!();
     cubecl_core::testgen_complex_math!();
     cubecl_core::testgen_complex_validation!();
+
+    /// A producer failure must be observable without flushing: `flush` also retires staged host
+    /// bytes and arms a fence that the next submission synchronizes, so a host-side publisher that
+    /// only needs the error (and not a device wait) uses `check_errors` instead.
+    #[test]
+    fn client_check_errors_reports_a_failed_launch_without_flushing() {
+        use cubecl_core::prelude::*;
+        use cubecl_core::runtime_tests::launch::kernel_resource_errors;
+        use cubecl_runtime::server::{LaunchError, ServerError};
+
+        let client = TestRuntime::client(&Default::default());
+        let max_shared_size = client.properties().hardware.max_shared_memory_size;
+        let shared_size = (max_shared_size + 1).div_ceil(size_of::<u32>());
+        let handle = client.create_from_slice(u32::as_bytes(&[0]));
+
+        kernel_resource_errors::launch(
+            &client,
+            CubeCount::Static(1, 1, 1),
+            CubeDim::new_1d(1),
+            unsafe { ArrayArg::from_raw_parts(handle.clone(), 1) },
+            shared_size,
+        );
+
+        match client.check_errors() {
+            Err(ServerError::ServerUnhealthy { mut errors, .. }) => {
+                let error = errors.remove(0);
+                assert!(
+                    matches!(error, ServerError::Launch(LaunchError::TooManyResources(_))),
+                    "expected a reported launch failure, got {error:?}"
+                );
+            }
+            other => panic!("expected a reported launch failure, got {other:?}"),
+        }
+
+        // The error queue was drained, so the stream is healthy again without any device wait.
+        client
+            .check_errors()
+            .expect("a stream whose errors were drained reports none");
+    }
 }

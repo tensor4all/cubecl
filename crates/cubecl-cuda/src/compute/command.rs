@@ -400,6 +400,13 @@ impl<'a> Command<'a> {
 
         current.drop_queue.push(data);
 
+        // Enforce the staging policy here as well as after a kernel launch: a write-only workload
+        // (a transfer loop, for example) never reaches the kernel path, so without this check its
+        // staged host bytes would be retained until some unrelated kernel happened to flush.
+        if current.drop_queue.should_flush() {
+            current.drop_queue.flush(|| Fence::new(current.sys));
+        }
+
         Ok(())
     }
 

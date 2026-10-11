@@ -146,7 +146,7 @@ impl ComputeServer for DummyServer {
         })
     }
 
-    fn write(&mut self, descriptors: Vec<(CopyDescriptor, Bytes)>, _stream_id: StreamId) {
+    unsafe fn write(&mut self, descriptors: Vec<(CopyDescriptor, Bytes)>, _stream_id: StreamId) {
         for (descriptor, data) in descriptors {
             let storage_h = self
                 .memory_management
@@ -288,12 +288,15 @@ impl DummyServer {
         let shape: Shape = [data.len()].into();
 
         self.initialize_memory(handle.memory.clone(), handle.size(), stream_id);
-        self.write(
-            vec![(
-                CopyDescriptor::new(handle.binding(), shape, strides, 1),
-                Bytes::from_bytes_vec(data.to_vec()),
-            )],
-            stream_id,
-        );
+        // SAFETY: the descriptor's binding belongs to the handle this test owns.
+        unsafe {
+            self.write(
+                vec![(
+                    CopyDescriptor::new(handle.binding(), shape, strides, 1),
+                    Bytes::from_bytes_vec(data.to_vec()),
+                )],
+                stream_id,
+            )
+        };
     }
 }

@@ -354,8 +354,23 @@ where
         stream_id: StreamId,
     ) -> DynFut<Result<Vec<Bytes>, ServerError>>;
 
-    /// Writes the specified bytes into the buffers given
-    fn write(&mut self, descriptors: Vec<(CopyDescriptor, Bytes)>, stream_id: StreamId);
+    /// Writes the specified bytes into the buffers given.
+    ///
+    /// # Safety
+    ///
+    /// The caller must hold write authority over every destination buffer: each descriptor's binding
+    /// must refer to storage this caller owns (or exclusively borrows), and no other live value may
+    /// read from or write to it until the submitted work retires. A binding obtained from a borrowed
+    /// tensor does not carry that authority, which is why this operation is `unsafe` rather than
+    /// trusting a caller-supplied descriptor.
+    ///
+    /// ```compile_fail
+    /// // Writing through a server requires an `unsafe` block that asserts the authority above.
+    /// fn write_through(server: &mut dyn cubecl_runtime::server::ComputeServer) {
+    ///     server.write(Vec::new(), cubecl_runtime::stream_id::StreamId::current());
+    /// }
+    /// ```
+    unsafe fn write(&mut self, descriptors: Vec<(CopyDescriptor, Bytes)>, stream_id: StreamId);
 
     /// Wait for the completion of every task in the server.
     fn sync(&mut self, stream_id: StreamId) -> DynFut<Result<(), ServerError>>;

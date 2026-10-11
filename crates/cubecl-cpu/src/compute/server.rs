@@ -233,7 +233,7 @@ impl ComputeServer for CpuServer {
         })
     }
 
-    fn write(&mut self, descriptors: Vec<(CopyDescriptor, Bytes)>, stream_id: StreamId) {
+    unsafe fn write(&mut self, descriptors: Vec<(CopyDescriptor, Bytes)>, stream_id: StreamId) {
         for (desc, data) in descriptors {
             let stream = self.scheduler.stream(&desc.handle.stream);
 

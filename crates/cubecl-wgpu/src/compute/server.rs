@@ -358,7 +358,7 @@ impl ComputeServer for WgpuServer {
         stream.read_resources(resources)
     }
 
-    fn write(&mut self, descriptors: Vec<(CopyDescriptor, Bytes)>, stream_id: StreamId) {
+    unsafe fn write(&mut self, descriptors: Vec<(CopyDescriptor, Bytes)>, stream_id: StreamId) {
         for (desc, data) in descriptors {
             let stream = self.scheduler.stream(&desc.handle.stream);
 
@@ -563,13 +563,17 @@ mod tests {
             .unwrap();
         let resource = managed.resource().clone();
 
-        server.write(
-            vec![(
-                CopyDescriptor::new(handle.binding(), [16].into(), [1].into(), 1),
-                Bytes::from_bytes_vec(vec![7; 16]),
-            )],
-            stream_id,
-        );
+        // SAFETY: the descriptor's binding belongs to the allocation created above, so this test owns
+        // the destination storage.
+        unsafe {
+            server.write(
+                vec![(
+                    CopyDescriptor::new(handle.binding(), [16].into(), [1].into(), 1),
+                    Bytes::from_bytes_vec(vec![7; 16]),
+                )],
+                stream_id,
+            )
+        };
 
         let host_attempt = std::thread::spawn(move || resource.map_read().unwrap_err());
         assert_eq!(

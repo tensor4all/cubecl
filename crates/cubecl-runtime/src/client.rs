@@ -241,7 +241,9 @@ impl<R: Runtime> ComputeClient<R> {
         let (size, memory) = (handle_base.size(), handle_base.memory);
         self.device.submit(move |server| {
             server.initialize_memory(memory, size, stream_id);
-            server.write(descriptors, stream_id);
+            // SAFETY: the descriptors were built from the handle this call just created, so this
+            // caller owns the destination storage and nothing else can reach it yet.
+            unsafe { server.write(descriptors, stream_id) };
         });
 
         Ok(layouts)
@@ -1035,7 +1037,9 @@ impl<R: Runtime> ComputeClient<R> {
         let (size, memory) = (handle_base.size(), handle_base.memory);
         dst_server.device.submit(move |server| {
             server.initialize_memory(memory, size, stream_id);
-            server.write(vec![(desc_descriptor, data.remove(0))], stream_id)
+            // SAFETY: the descriptor's binding belongs to the allocation created just above, so this
+            // caller owns the destination storage and nothing else can reach it yet.
+            unsafe { server.write(vec![(desc_descriptor, data.remove(0))], stream_id) }
         });
 
         alloc

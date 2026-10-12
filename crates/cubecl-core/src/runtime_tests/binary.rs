@@ -903,7 +903,9 @@ pub fn test_ieee_constant_folds<R: Runtime>(client: Client) {
     }
     check!(f32);
     check!(f64);
+}
 
+/// A `bool` buffer round-trips where the device can store one.
 ///
 /// The element is one byte, so the launcher sizes the buffer from `BoolType`'s
 /// native size. Backends whose table does not register `bool` for buffer usage

@@ -834,6 +834,7 @@ pub fn test_dp4a<R: Runtime>(client: Client) {
     assert_eq!(i32::from_bytes(&actual), expected);
 }
 
+<<<<<<< HEAD
 
 /// A runtime operand must not be rewritten through a constant zero or a
 /// reflexive identity. Each of these was a partial fold in the float dialect:
@@ -896,6 +897,45 @@ pub fn test_ieee_constant_folds<R: Runtime>(client: Client) {
     }
     check!(f32);
     check!(f64);
+=======
+/// A `bool` buffer round-trips where the device can store one.
+///
+/// The element is one byte, so the launcher sizes the buffer from `BoolType`'s
+/// native size. Backends whose table does not register `bool` for buffer usage
+/// (wgpu: no host-shareable bool buffer) skip this; the builder refuses such a
+/// kernel at build time rather than letting the backend emit an invalid shader.
+pub fn test_bool_buffer<R: Runtime>(client: Client) {
+    use cubecl_ir::features::TypeUsage;
+    if !bool::supported_uses(&client).contains(TypeUsage::Buffer) {
+        return;
+    }
+
+    #[cube(launch_unchecked)]
+    fn invert_bool(input: &[bool], output: &mut [bool]) {
+        if ABSOLUTE_POS < input.len() {
+            output[ABSOLUTE_POS] = !input[ABSOLUTE_POS];
+        }
+    }
+
+    // `bool` is one byte per element, so the host side hands over those bytes.
+    let input: [u8; 4] = [1, 0, 1, 1];
+    let handle_input = client.create_from_slice(u8::as_bytes(&input));
+    let handle_output = client.empty(input.len() * core::mem::size_of::<bool>());
+
+    unsafe {
+        invert_bool::launch_unchecked(
+            &client,
+            CubeCount::Static(1, 1, 1),
+            CubeDim::new_1d(input.len() as u32),
+            BufferArg::from_raw_parts(handle_input, input.len()),
+            BufferArg::from_raw_parts(handle_output.clone(), input.len()),
+        )
+    };
+
+    let bytes = client.read_one_unchecked(handle_output);
+    let actual = u8::from_bytes(&bytes);
+    assert_eq!(actual, &[0, 1, 0, 0]);
+>>>>>>> 61ade6f6d (feat(wgpu): refuse a buffer whose element type the device cannot store)
 }
 
 #[allow(missing_docs)]
@@ -990,11 +1030,18 @@ macro_rules! testgen_binary_untyped {
             add_test!(test_powi_int);
             add_test!(test_signed_remainder);
             add_test!(test_self_div);
+<<<<<<< HEAD
 
             #[$crate::runtime_tests::test_log::test]
             fn test_ieee_constant_folds() {
                 let client = TestRuntime::client(&Default::default());
                 cubecl_core::runtime_tests::binary::test_ieee_constant_folds::<TestRuntime>(client);
+=======
+            #[$crate::runtime_tests::test_log::test]
+            fn test_bool_buffer() {
+                let client = TestRuntime::client(&Default::default());
+                cubecl_core::runtime_tests::binary::test_bool_buffer::<TestRuntime>(client);
+>>>>>>> 61ade6f6d (feat(wgpu): refuse a buffer whose element type the device cannot store)
             }
         }
     };

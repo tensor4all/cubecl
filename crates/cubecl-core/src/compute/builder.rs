@@ -1,15 +1,20 @@
 use alloc::vec::Vec;
 use core::sync::atomic::{AtomicI8, Ordering};
 use derive_more::Deref;
-use pliron::r#type::TypeHandle;
+use pliron::r#type::{TypeHandle, type_cast};
 
 use crate::{KernelExpansion, KernelIntegrator, prelude::KernelDefinition};
 use alloc::collections::BTreeMap;
 use cubecl_ir::{
     DeviceProperties, ElemType, Scope, TargetProperties,
+    attributes::{ATTR_BUFFER_BINDING, BufferBindingAttr, FuncInterface},
+    features::Features,
+    interfaces::ScalarType,
     metadata::{INFO_ALIGN, Info, Metadata, SizedInfoField},
     pliron::value::Value,
+    prelude::*,
     settings::KernelSettings,
+    types::{PointerType, RuntimeArrayType},
 };
 use cubecl_runtime::config::{
     CubeClRuntimeConfig, RuntimeConfig, compilation::CompilationLogLevel,
@@ -85,6 +90,7 @@ impl KernelBuilder {
 
     /// Build the [kernel definition](KernelDefinition).
     pub fn build(self) -> KernelDefinition {
+        self.validate_buffer_types();
         for warning in self.scope.pop_warnings() {
             log::warn!("[{}] {warning}", self.settings.kernel_name);
         }
@@ -94,6 +100,19 @@ impl KernelBuilder {
             info,
         })
         .integrate(self.settings)
+    }
+
+    /// Refuse a kernel that declares a buffer whose element type this device cannot store.
+    ///
+    /// A native size is not a storage representation: `bool` is one byte, yet WGSL
+    /// has no host-shareable `bool` buffer and SPIR-V has no physical bool buffer.
+    /// Kernels built without device properties (hand-written definitions) are left
+    /// alone; everything else is checked against the table the device declared.
+    fn validate_buffer_types(&self) {
+        let Some(props) = self.scope.state().device_properties.clone() else {
+            return;
+        };
+        refuse_unstorable_buffers(&self.scope, &props.features);
     }
 
     fn create_info(&self) -> Info {
@@ -150,5 +169,103 @@ impl KernelBuilder {
             buffer_idx: 0,
             ext_meta_idx: 0,
         }
+    }
+}
+
+/// Refuse a kernel that declares a buffer whose element type `features` cannot
+/// store, naming the type and what to do instead.
+///
+/// Split out from [`KernelBuilder::validate_buffer_types`] so it can be exercised
+/// without a device: it needs only a scope and a feature table.
+fn refuse_unstorable_buffers(scope: &Scope, features: &Features) {
+    let ctx = scope.ctx();
+    let entry = scope.state().entry_func;
+    let num_args = entry.get_entry_block(ctx).deref(ctx).get_num_arguments();
+
+    for pos in 0..num_args {
+        if entry
+            .get_arg_attr::<BufferBindingAttr>(ctx, pos, &ATTR_BUFFER_BINDING)
+            .is_none()
+        {
+            continue;
+        }
+        let arg = entry.get_entry_block(ctx).deref(ctx).get_argument(pos);
+        let arg_ty = arg.get_type(ctx);
+        let ty = arg_ty.deref(ctx);
+        let Some(ptr) = ty.downcast_ref::<PointerType>() else {
+            continue;
+        };
+        let pointee = ptr.inner.deref(ctx);
+        let Some(array) = pointee.downcast_ref::<RuntimeArrayType>() else {
+            continue;
+        };
+        let element = array.inner.deref(ctx);
+        let Some(scalar) = type_cast::<dyn ScalarType>(&*element) else {
+            continue;
+        };
+        let elem = scalar.elem_type(ctx);
+
+        assert!(
+            features.supports_buffer(elem),
+            "this device cannot store a buffer of {elem:?}: its feature table does not \
+             register that element type for buffer usage. Bind the data as a storable \
+             element type instead (for `bool`, a byte or word per element)."
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cubecl_ir::{
+        AddressType,
+        features::TypeUsage,
+        settings::{Dim3, ExecutionMode},
+        types::scalar::BoolType,
+    };
+
+    fn settings() -> KernelSettings {
+        KernelSettings::new(
+            Dim3 { x: 1, y: 1, z: 1 },
+            ExecutionMode::Checked,
+            AddressType::U32,
+        )
+    }
+
+    fn scope_with_bool_buffer() -> Scope {
+        let mut builder = KernelBuilder::new(settings());
+        let ty = BoolType::get(builder.scope.ctx_mut()).to_handle();
+        let _ = builder.buffer(ty);
+        builder.scope
+    }
+
+    fn features_with(bool_storable: bool) -> Features {
+        let mut features = Features::default();
+        let uses = if bool_storable {
+            TypeUsage::all()
+        } else {
+            TypeUsage::all() - TypeUsage::Buffer
+        };
+        features.types.elem.insert(ElemType::Bool, uses);
+        features
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot store a buffer of")]
+    fn a_bool_buffer_is_refused_where_the_device_cannot_store_it() {
+        refuse_unstorable_buffers(&scope_with_bool_buffer(), &features_with(false));
+    }
+
+    #[test]
+    fn a_bool_buffer_is_allowed_where_the_device_can_store_it() {
+        refuse_unstorable_buffers(&scope_with_bool_buffer(), &features_with(true));
+    }
+
+    #[test]
+    fn a_kernel_without_device_properties_is_left_alone() {
+        let mut builder = KernelBuilder::new(settings());
+        let ty = BoolType::get(builder.scope.ctx_mut()).to_handle();
+        let _ = builder.buffer(ty);
+        let _ = builder.build();
     }
 }

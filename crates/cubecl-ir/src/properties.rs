@@ -489,6 +489,15 @@ impl DeviceProperties {
         self.features.supports_address(ty)
     }
 
+    /// Whether `ty` can be the element type of a buffer on this device.
+    ///
+    /// A type may be usable as a value and not storable: WGSL has no
+    /// host-shareable `bool` buffer and SPIR-V has no physical bool buffer, so
+    /// those backends must refuse such a buffer rather than declare one.
+    pub fn supports_buffer_type(&self, ty: impl Into<ElemType>) -> bool {
+        self.features.supports_buffer(ty.into())
+    }
+
     /// Register an address type to the features
     pub fn register_address_type(&mut self, ty: impl Into<AddressType>) {
         self.features.types.address.insert(ty.into());
@@ -602,6 +611,21 @@ fn vector_sizes_down_from(widest: usize) -> impl Iterator<Item = VectorSize> + C
 mod tests {
     use super::*;
     use alloc::string::ToString;
+
+    #[test]
+    fn a_type_usable_as_a_value_is_not_necessarily_storable() {
+        let mut features = crate::features::Features::default();
+        features
+            .types
+            .elem
+            .insert(ElemType::Float(crate::FloatKind::F32), TypeUsage::all());
+        features
+            .types
+            .elem
+            .insert(ElemType::Bool, TypeUsage::all() - TypeUsage::Buffer);
+        assert!(features.supports_buffer(ElemType::Float(crate::FloatKind::F32)));
+        assert!(!features.supports_buffer(ElemType::Bool));
+    }
 
     #[test]
     fn a_device_without_a_fixed_register_set_has_no_budget() {

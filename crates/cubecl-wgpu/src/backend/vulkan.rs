@@ -553,6 +553,12 @@ fn register_types(props: &mut DeviceProperties, ext_feat: &ExtendedFeatures<'_>)
         props.register_type_usage(ty, TypeUsage::all());
     }
 
+    // A `bool` element is usable as a value but not storable: WGSL has no
+    // host-shareable `bool` buffer and this path has no physical bool buffer
+    // either. Claiming `Buffer` here would let the backend declare one; the
+    // compiler refuses a buffer whose element type the device cannot store.
+    props.register_type_usage(ElemType::Bool, TypeUsage::all() - TypeUsage::Buffer);
+
     for ty in default_atomic_types {
         props.register_atomic_type_usage(Type::atomic(ty), AtomicUsage::all());
     }

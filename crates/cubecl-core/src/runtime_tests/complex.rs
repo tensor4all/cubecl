@@ -1276,13 +1276,17 @@ macro_rules! testgen_complex_core {
             #[$crate::runtime_tests::test_log::test]
             fn test_complex_mul_add_cf32() {
                 let client = TestRuntime::client(&Default::default());
-                cubecl_core::runtime_tests::complex::test_complex_mul_add_cf32::<TestRuntime>(client);
+                cubecl_core::runtime_tests::complex::test_complex_mul_add_cf32::<TestRuntime>(
+                    client,
+                );
             }
 
             #[$crate::runtime_tests::test_log::test]
             fn test_complex_mul_add_cf64() {
                 let client = TestRuntime::client(&Default::default());
-                cubecl_core::runtime_tests::complex::test_complex_mul_add_cf64::<TestRuntime>(client);
+                cubecl_core::runtime_tests::complex::test_complex_mul_add_cf64::<TestRuntime>(
+                    client,
+                );
             }
 
             #[$crate::runtime_tests::test_log::test]

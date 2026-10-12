@@ -717,7 +717,6 @@ pub(super) fn int_attr(ctx: &Context, ty: TypeHandle, val: i128) -> AttrObj {
     }
 }
 
-
 #[cube_op(name = "math.fma")]
 #[result_ty(same_as = a)]
 #[op_interfaces(SameOperandsType, SameOperandsAndResultType, TriviallyUnrollable)]

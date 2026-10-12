@@ -834,8 +834,6 @@ pub fn test_dp4a<R: Runtime>(client: Client) {
     assert_eq!(i32::from_bytes(&actual), expected);
 }
 
-<<<<<<< HEAD
-
 /// A runtime operand must not be rewritten through a constant zero or a
 /// reflexive identity. Each of these was a partial fold in the float dialect:
 /// `v % 1.0` is `0.5` for `2.5` (not `v`), `v - v` is `NaN` for `NaN` and
@@ -897,7 +895,8 @@ pub fn test_ieee_constant_folds<R: Runtime>(client: Client) {
     }
     check!(f32);
     check!(f64);
-=======
+}
+
 /// A `bool` buffer round-trips where the device can store one.
 ///
 /// The element is one byte, so the launcher sizes the buffer from `BoolType`'s
@@ -935,7 +934,6 @@ pub fn test_bool_buffer<R: Runtime>(client: Client) {
     let bytes = client.read_one_unchecked(handle_output);
     let actual = u8::from_bytes(&bytes);
     assert_eq!(actual, &[0, 1, 0, 0]);
->>>>>>> 61ade6f6d (feat(wgpu): refuse a buffer whose element type the device cannot store)
 }
 
 #[allow(missing_docs)]
@@ -1030,18 +1028,16 @@ macro_rules! testgen_binary_untyped {
             add_test!(test_powi_int);
             add_test!(test_signed_remainder);
             add_test!(test_self_div);
-<<<<<<< HEAD
+            #[$crate::runtime_tests::test_log::test]
+            fn test_bool_buffer() {
+                let client = TestRuntime::client(&Default::default());
+                cubecl_core::runtime_tests::binary::test_bool_buffer::<TestRuntime>(client);
+            }
 
             #[$crate::runtime_tests::test_log::test]
             fn test_ieee_constant_folds() {
                 let client = TestRuntime::client(&Default::default());
                 cubecl_core::runtime_tests::binary::test_ieee_constant_folds::<TestRuntime>(client);
-=======
-            #[$crate::runtime_tests::test_log::test]
-            fn test_bool_buffer() {
-                let client = TestRuntime::client(&Default::default());
-                cubecl_core::runtime_tests::binary::test_bool_buffer::<TestRuntime>(client);
->>>>>>> 61ade6f6d (feat(wgpu): refuse a buffer whose element type the device cannot store)
             }
         }
     };

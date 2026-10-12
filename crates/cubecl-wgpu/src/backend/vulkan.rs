@@ -50,11 +50,8 @@ pub fn bindings(repr: &SpirvKernel) -> (Vec<Visibility>, usize) {
 }
 
 /// Request a native Vulkan device, panicking if device creation fails.
-pub async fn request_vulkan_device(
-    adapter: &wgpu::Adapter,
-    primary_memory: crate::PrimaryMemoryMode,
-) -> Option<(wgpu::Device, wgpu::Queue)> {
-    try_request_vulkan_device(adapter, primary_memory)
+pub async fn request_vulkan_device(adapter: &wgpu::Adapter) -> Option<(wgpu::Device, wgpu::Queue)> {
+    try_request_vulkan_device(adapter)
         .await
         .expect("Unable to request Vulkan device")
 }
@@ -63,10 +60,11 @@ pub async fn request_vulkan_device(
 /// Returns an error if the adapter does not use Vulkan.
 pub async fn try_request_vulkan_device(
     adapter: &wgpu::Adapter,
-    primary_memory: crate::PrimaryMemoryMode,
 ) -> Result<Option<(wgpu::Device, wgpu::Queue)>, crate::WgpuInitError> {
     let limits = adapter.limits();
-    let features = crate::backend::requested_features(adapter, primary_memory)?;
+    let features = adapter
+        .features()
+        .difference(Features::MAPPABLE_PRIMARY_BUFFERS);
     unsafe {
         let hal_adapter = adapter.as_hal::<hal::api::Vulkan>().ok_or_else(|| {
             crate::WgpuInitError::InvalidConfiguration {
@@ -308,15 +306,11 @@ pub(crate) fn create_storage_buffer(
     };
     let buffer = unsafe { wgpu_device.create_buffer_from_hal::<hal::api::Vulkan>(buffer, desc) };
 
-    // This path allocates the buffer outside `wgpu` and maps it for the host
-    // itself, so the memory it hands back is device-local: the host-visible mode
-    // never comes here — its pool asks `wgpu` for a mappable buffer instead —
-    // and the mapping above is the backend's own, not a host-access claim.
-    Ok(WgpuMemory::device_local(
+    Ok(WgpuMemory {
         buffer,
-        NonZeroU64::new(device_address),
+        address: NonZeroU64::new(device_address),
         host_ptr,
-    ))
+    })
 }
 
 fn as_io_error(result: vk::Result, size: u64) -> IoError {

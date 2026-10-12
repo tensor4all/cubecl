@@ -1,5 +1,5 @@
 [package]
-name = "cubecl-example"
+name = "t4a-cubecl-example"
 edition.workspace = true
 license.workspace = true
 readme.workspace = true

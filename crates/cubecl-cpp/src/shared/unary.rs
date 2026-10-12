@@ -318,7 +318,10 @@ fn count_ones<T: Scalar, N: Size>(input: Vector<T, N>) -> Vector<u32, N> {
 }
 
 lower_unop!(RecipOp, recip);
-lower_unop!(Log1pOp, log1p);
+// `log1p` is native on CUDA and HIP; only Metal gets the polyfill, which is
+// `(1 + x).ln()` and loses all significance for small `x` (the reason the
+// kernel-side op exists).
+lower_unop!(Log1pOp, log1p, |_, ctx| ctx.target() == Target::Metal);
 lower_unop!(DegreesOp, to_degrees);
 lower_unop!(RadiansOp, to_radians);
 lower_unop!(FindFirstSetOp, find_first_set, |_, ctx| {

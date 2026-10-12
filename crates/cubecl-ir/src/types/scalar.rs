@@ -358,6 +358,16 @@ scalar!(BoolType);
 not_packed!(BoolType);
 
 #[type_interface_impl]
+impl SizedType for BoolType {
+    /// A `bool` element occupies one byte wherever it is a buffer element, which
+    /// is what a `&[bool]` launch argument needs: the launcher sizes the buffer
+    /// from this and `bool::__expand_size` reads it back.
+    fn size(&self, _ctx: &Context) -> usize {
+        1
+    }
+}
+
+#[type_interface_impl]
 impl ScalarType for BoolType {
     fn elem_type(&self, _ctx: &Context) -> ElemType {
         ElemType::Bool

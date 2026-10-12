@@ -99,6 +99,7 @@ function!(RoundOp, "rint", packable, no_msl_bfloat);
 // function!(FastTanhOp, "__tanhf", false);
 
 function!(ErfOp, "erf", no_half);
+function!(Log1pOp, "log1p", no_half);
 
 shared_op_with_out!(SAbsOp, |op, ctx| {
     format!("abs({})", op.input(ctx).name(ctx))
@@ -312,7 +313,7 @@ fn count_ones<T: Scalar, N: Size>(input: Vector<T, N>) -> Vector<u32, N> {
 }
 
 lower_unop!(RecipOp, recip);
-lower_unop!(Log1pOp, log1p);
+lower_unop!(Log1pOp, log1p, |_, ctx| ctx.target() == Target::Metal);
 lower_unop!(DegreesOp, to_degrees);
 lower_unop!(RadiansOp, to_radians);
 lower_unop!(FindFirstSetOp, find_first_set, |_, ctx| {

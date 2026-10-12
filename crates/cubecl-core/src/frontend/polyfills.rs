@@ -215,9 +215,9 @@ pub fn log1p<T: Float, N: Size>(input: Vector<T, N>) -> Vector<T, N> {
     let square = x * x;
     let cube = square * x;
     let quartic = square * square;
-    let series =
-        x - square * Vector::new(T::new(0.5_f32)) + cube * Vector::new(T::new(1.0_f32 / 3.0_f32))
-            - quartic * Vector::new(T::new(0.25_f32));
+    let series = x - square * Vector::new(T::new(0.5_f32))
+        + cube * Vector::new(T::new(1.0_f32 / 3.0_f32))
+        - quartic * Vector::new(T::new(0.25_f32));
     let is_small = x.abs().less_than(&Vector::new(T::new(1e-2_f32)));
     select_many(is_small, series, (x + Vector::one()).ln())
 }

@@ -203,9 +203,23 @@ pub fn expand_dp4a_polyfill(scope: &Scope, a: Value, b: Value, c: Value) -> Valu
     dp4a_polyfill::expand::<SizeA>(scope, a.into(), b.into(), c.into()).value(scope)
 }
 
+/// `ln(1 + x)`, accurate for small `x`.
+///
+/// `(1 + x).ln()` loses all significance below `x ~ sqrt(eps)`: `1 + 1e-7` in
+/// f32 is `1.0000001`, so the result is the representation step rather than
+/// `1e-7` (19% relative error). Near zero the series is used instead, the same
+/// shape the `expm1` polyfill below uses.
 #[cube]
 pub fn log1p<T: Float, N: Size>(input: Vector<T, N>) -> Vector<T, N> {
-    (input + Vector::one()).ln()
+    let x = input;
+    let square = x * x;
+    let cube = square * x;
+    let quartic = square * square;
+    let series =
+        x - square * Vector::new(T::new(0.5_f32)) + cube * Vector::new(T::new(1.0_f32 / 3.0_f32))
+            - quartic * Vector::new(T::new(0.25_f32));
+    let is_small = x.abs().less_than(&Vector::new(T::new(1e-2_f32)));
+    select_many(is_small, series, (x + Vector::one()).ln())
 }
 
 #[cube]

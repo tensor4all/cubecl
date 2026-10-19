@@ -9,6 +9,7 @@ use crate::{
         KernelArguments, KernelResource, MemoryLayout, MemoryLayoutDescriptor,
         MemoryLayoutStrategy, ProfileError, ProfilingToken, ReduceOperation, Server, ServerError,
         ServerStorage, ServerUtilities,
+        pending::{MarkOnExit, PendingWork},
     },
     storage::{ComputeStorage, ManagedResource},
     throughput::{
@@ -88,6 +89,9 @@ struct GraphHandle {
     id: GraphId,
     device: DeviceHandle<dyn Server>,
     stream_id: StreamId,
+    /// The pending-work record of the graph's device, so the release this drop submits is
+    /// counted like any other stream work.
+    pending: PendingWork,
 }
 
 impl Graph {
@@ -137,6 +141,7 @@ impl Graph {
     pub unsafe fn replay(&self) -> Result<(), ServerError> {
         let id = self.inner.id;
         let stream_id = self.inner.stream_id;
+        let _pending = self.inner.pending.mark_on_exit(stream_id);
         self.inner
             .device
             .submit_blocking(move |server| server.replay(id, stream_id))
@@ -160,6 +165,7 @@ impl Drop for GraphHandle {
         // only thread allowed to touch it) and only once in-flight replays have
         // completed — `replay` returns at enqueue time, not completion. Ship the
         // release to the actor; the backend syncs the stream before it destroys.
+        let _pending = self.pending.mark_on_exit(stream_id);
         self.device
             .submit(move |server| server.graph_destroy(id, stream_id));
     }
@@ -318,6 +324,7 @@ impl Client {
             return Box::pin(core::future::ready(Err(err)));
         }
         let stream_id = self.stream_id();
+        let _pending = self.pending_guard();
         self.device
             .submit_blocking(move |server| server.read(descriptors, stream_id))
             .unwrap_or_resume()
@@ -521,6 +528,9 @@ impl Client {
     /// failure inside it. A panic in the closure resumes on the caller's
     /// thread.
     pub fn with_server<S: Server, T: Send>(&self, f: impl FnOnce(&mut S) -> T + Send) -> Option<T> {
+        // A closure with the server to itself may submit work on any stream, which no
+        // per-stream mark sees, so every stream counts as pending until its own flush.
+        let _pending = self.utilities.pending.mark_all_on_exit();
         self.device
             .submit_blocking(move |server| (server as &mut dyn Any).downcast_mut::<S>().map(f))
             .unwrap_or_resume()
@@ -555,6 +565,7 @@ impl Client {
             .collect::<Vec<_>>();
 
         let (size, memory) = (handle_base.size(), handle_base.memory);
+        let _pending = self.pending_guard();
         self.device.submit(move |server| {
             // Cannot write on memory that wasn't initialized. The error is attached to the
             // buffer and is reported at the next sync point.
@@ -595,6 +606,7 @@ impl Client {
             .collect::<Vec<_>>();
 
         let (size, memory) = (handle_base.size(), handle_base.memory);
+        let _pending = self.pending_guard();
         self.device.submit(move |server| {
             // Cannot write on memory that wasn't initialized. The error is attached to the
             // buffer and is reported at the next sync point.
@@ -696,6 +708,7 @@ impl Client {
     ) -> Re {
         let stream_id = StreamId::current();
 
+        let _pending = self.pending_guard_on(stream_id);
         self.device.submit(move |server| {
             server.allocation_mode(mode, stream_id);
         });
@@ -724,6 +737,7 @@ impl Client {
         let descriptor =
             CopyDescriptor::new(handle.clone().binding(), [data.len()].into(), [1].into(), 1);
         self.expect_local(&descriptor.handle);
+        let _pending = self.pending_guard();
         self.device.submit(move |server| {
             server.write(vec![(descriptor, data)], stream_id);
         });
@@ -845,6 +859,7 @@ impl Client {
                 .apply(self.service_id(), stream_id, &descriptors);
 
         let (size, memory) = (handle_base.size(), handle_base.memory);
+        let _pending = self.pending_guard();
         self.device.submit(move |server| {
             // The error is attached to the buffer and is reported at the next sync point.
             let _ = server.initialize_memory(memory, size, stream_id);
@@ -909,6 +924,7 @@ impl Client {
 
         let stream_id = self.stream_id();
         let sizes = sizes.to_vec();
+        let _pending = self.pending_guard();
         let stagings = self
             .device
             .submit_blocking(move |server| server.staging(&sizes, stream_id))
@@ -983,6 +999,7 @@ impl Client {
             .collect();
         for member in &members {
             let device_ids = device_ids.clone();
+            let _pending = member.pending_guard();
             member
                 .device
                 .submit(move |server| server.comm_init(device_ids).unwrap());
@@ -1034,6 +1051,7 @@ impl Client {
         }
         let stream_id = self.stream_id();
 
+        let _pending = self.pending_guard();
         self.device.submit(move |server| {
             // Logged rather than unwrapped: a panic on the server thread is
             // reduced to a log line by the channel's catch_unwind anyway, so
@@ -1079,6 +1097,7 @@ impl Client {
 
         self.ensure_init_collective(device_ids.clone());
 
+        let _pending = self.pending_guard();
         self.device.submit(move |server| {
             // The report lives on the buffers: a refused or failed reduce has
             // tainted the destination, so the read that consumes it fails on
@@ -1123,6 +1142,7 @@ impl Client {
         // NCCL pairs sends and recvs in the order each device queues them.
         let _order = PEER_ORDER.lock();
 
+        let _pending = self.pending_guard_on(stream_id_src);
         self.device.submit(move |server_src| {
             // A refused send has no local buffer to answer for, so the log is
             // the whole local report. The peer's posted recv is left waiting
@@ -1137,6 +1157,7 @@ impl Client {
             }
         });
 
+        let _pending = dst_server.pending_guard_on(stream_id_dst);
         dst_server.device.submit(move |server_dst| {
             // A failed recv taints the destination handle, so the read that
             // consumes this transfer fails on the cause.
@@ -1218,6 +1239,7 @@ impl Client {
         match level {
             None | Some(ProfileLevel::ExecutionOnly) if !observed_timing => {
                 let utilities = self.utilities.clone();
+                let _pending = self.pending_guard_on(stream_id);
                 self.device.submit(move |state| {
                     let execution_info = if matches!(level, Some(ProfileLevel::ExecutionOnly)) {
                         Some(profile_label(kernel.name(), &kernel.id()))
@@ -1284,6 +1306,7 @@ impl Client {
                             Some((kernel, count, bindings)) => {
                                 let utilities = self.utilities.clone();
                                 let kernel_id = kernel.id();
+                                let _pending = self.pending_guard_on(stream_id);
                                 self.device.submit(move |state| {
                                     issued.apply(|| unsafe {
                                         state.launch(
@@ -1389,13 +1412,71 @@ impl Client {
             .unwrap_or_resume()
     }
 
+    /// Take before a submit of stream work on `stream`: once the guard drops — when the
+    /// submitting call is over, whether it returned or unwound — the task counts as what
+    /// [`has_pending_work`](Self::has_pending_work) reports until a flush pushes it.
+    ///
+    /// Never published before the submit: a count published while the task is still on
+    /// its way could be retired by a flush that never pushed it.
+    fn pending_guard_on(&self, stream_id: StreamId) -> MarkOnExit<'_> {
+        self.utilities.pending.mark_on_exit(stream_id)
+    }
+
+    /// [`pending_guard_on`](Self::pending_guard_on) for this client's own stream.
+    fn pending_guard(&self) -> MarkOnExit<'_> {
+        self.pending_guard_on(self.stream_id())
+    }
+
     /// Flush all outstanding commands.
+    ///
+    /// A flush that runs inline on the device thread, as inside an
+    /// [`exclusive`](Self::exclusive) section there, pushes only what is already ahead of
+    /// it there — so it retires nothing, and the stream stays pending. A failed flush
+    /// retires nothing either: it pushed nothing past the work it counted.
     pub fn flush(&self) -> Result<(), ServerError> {
         let stream_id = self.stream_id();
+        let pending = &self.utilities.pending;
+        // Whether this flush runs inline is fixed by the calling thread, and an inline flush
+        // pushes nothing past what is already ahead of it there; asked first so the snapshot
+        // cannot be mistaken for one taken by a flush that will really be queued.
+        let inline = self.device.runs_inline();
+        let snapshot = pending.snapshot(stream_id);
 
-        self.device
+        let flushed = self
+            .device
             .submit_blocking(move |server| server.flush(stream_id))
-            .unwrap_or_resume()
+            .unwrap_or_resume();
+
+        if flushed.is_ok() && !inline {
+            pending.retire(stream_id, snapshot);
+        }
+
+        flushed
+    }
+
+    /// Whether this client's stream may hold work that a [`flush`](Self::flush) has not
+    /// pushed yet: a call on this stream, through any clone of this client, that returned
+    /// before this one submitted work after the last successful flush of the stream — or
+    /// any [`with_server`](Self::with_server) call ran since that flush, since such a
+    /// closure may touch any stream. A flush that ran inline on the device thread, as
+    /// inside an autotune [`exclusive`](Self::exclusive) section, does not count.
+    ///
+    /// `false` means a flush now would order nothing new before an external enqueue on
+    /// this stream, which is what lets a caller interleave its own device work with
+    /// `CubeCL`'s without paying a flush for an empty queue. Work submitted concurrently
+    /// from another thread is not covered: the query answers about the submissions that
+    /// happened-before it, not about the other thread's next one.
+    ///
+    /// It is a statement about host-side submission, not about GPU idleness: the stream
+    /// may still be running what a retired flush pushed. Buffer drops are not counted —
+    /// they reach the server by reference count rather than by submission, and need no
+    /// stream ordering before an external enqueue. [`get_resource`](Self::get_resource),
+    /// [`check`](Self::check) and [`sync`](Self::sync)/[`sync_buffers`](Self::sync_buffers)
+    /// neither mark nor retire.
+    ///
+    /// Answered on the caller's thread, without reaching the device thread.
+    pub fn has_pending_work(&self) -> bool {
+        self.utilities.pending.is_pending(self.stream_id())
     }
 
     /// Compile every kernel queued for compilation (see
@@ -1413,6 +1494,7 @@ impl Client {
     /// [`start_capture`](Self::start_capture) around the run to record.
     pub fn graph_prepare(&self) -> Result<(), ServerError> {
         let stream_id = self.stream_id();
+        let _pending = self.pending_guard();
         self.device
             .submit_blocking(move |server| server.graph_prepare(stream_id))
             .unwrap_or_resume()
@@ -1435,6 +1517,7 @@ impl Client {
     /// Returns an error on backends without graph support.
     pub fn start_capture(&self) -> Result<(), ServerError> {
         let stream_id = self.stream_id();
+        let _pending = self.pending_guard();
         self.device
             .submit_blocking(move |server| server.begin_capture(stream_id))
             .unwrap_or_resume()
@@ -1461,6 +1544,7 @@ impl Client {
     /// [`replay`](Graph::replay).
     pub fn stop_capture(&self) -> Result<Graph, ServerError> {
         let stream_id = self.stream_id();
+        let _pending = self.pending_guard();
         let id = self
             .device
             .submit_blocking(move |server| server.end_capture(stream_id))
@@ -1471,6 +1555,7 @@ impl Client {
                 id,
                 device: self.device.clone(),
                 stream_id,
+                pending: self.utilities.pending.clone(),
             }),
         })
     }
@@ -1617,6 +1702,7 @@ impl Client {
     /// This function isn't thread safe and might create memory leaks.
     pub unsafe fn allocation_mode(&self, mode: MemoryAllocationMode) {
         let stream_id = self.stream_id();
+        let _pending = self.pending_guard_on(stream_id);
         self.device
             .submit(move |server| server.allocation_mode(mode, stream_id));
     }
@@ -1631,6 +1717,8 @@ impl Client {
     /// Refused while a stream records a graph: releasing memory waits on the
     /// device, and a wait on a stream that records aborts its capture.
     pub fn memory_cleanup(&self) -> Result<(), ServerError> {
+        // The cleanup waits on the streams it releases from: stream work like any other.
+        let _pending = self.pending_guard();
         self.device
             .submit_blocking(move |server| {
                 server
@@ -1657,6 +1745,7 @@ impl Client {
     /// out between the two calls has to abandon it.
     pub fn profile_start(&self) -> Result<ProfileWindow, ProfileError> {
         let stream_id = self.stream_id();
+        let _pending = self.pending_guard();
         let token = self
             .device
             .submit_blocking(move |server| server.start_profile(stream_id))
@@ -1668,6 +1757,8 @@ impl Client {
     /// Close `window` at the current position of the stream it was opened on.
     pub fn profile_end(&self, window: ProfileWindow) -> Result<ProfileDuration, ProfileError> {
         let ProfileWindow { stream_id, token } = window;
+        // The window's stream, which is not the caller's when it is closed from another thread.
+        let _pending = self.pending_guard_on(stream_id);
         self.device
             .submit_blocking(move |server| server.end_profile(stream_id, token))
             .unwrap_or_resume()
@@ -1683,6 +1774,7 @@ impl Client {
     /// there, which is the case it exists for.
     pub fn profile_abandon(&self, window: ProfileWindow) {
         let ProfileWindow { stream_id, token } = window;
+        let _pending = self.pending_guard_on(stream_id);
         self.device
             .submit(move |server| server.abandon_profile(stream_id, token));
         self.device.flush_queue();
@@ -1725,6 +1817,8 @@ impl Client {
         };
 
         let device = self.device.clone();
+        // One mark covers every task the window submits: its start, what `func` queues, its end.
+        let _pending = self.pending_guard();
         #[allow(unused_mut, reason = "Used in profile-tracy")]
         let mut result = self
             .device
@@ -1820,6 +1914,7 @@ impl Client {
         let stream_id_src = self.stream_id();
         let stream_id_dst = dst_server.stream_id();
 
+        let _pending = self.pending_guard_on(stream_id_src);
         let read = self
             .device
             .submit_blocking(move |server| server.read(vec![src_descriptor], stream_id_src))
@@ -1846,6 +1941,7 @@ impl Client {
         };
 
         let (size, memory) = (handle_base.size(), handle_base.memory);
+        let _pending = dst_server.pending_guard_on(stream_id_dst);
         dst_server.device.submit(move |server| {
             // Cannot write on memory that wasn't initialized. The error is attached to the
             // buffer and is reported at the next sync point.

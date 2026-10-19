@@ -64,6 +64,13 @@ impl DeviceHandleSpec for ChannelDeviceHandle {
         self.state.utilities()
     }
 
+    /// The device's own runner thread executes a task submitted from it right here, in the
+    /// middle of whatever it is running, so a barrier it issues there sees only the tasks
+    /// already ahead of it — not the ones still queued behind.
+    fn runs_inline(&self) -> bool {
+        is_device_runner_thread(self.state.client.runner_id())
+    }
+
     /// Runs `task` on the device thread, blocking until it returns.
     fn submit_blocking<'a, R: Send, T: FnOnce(&mut dyn Any) -> R + Send + 'a>(
         &self,
@@ -1261,6 +1268,36 @@ mod tests {
 
         assert_eq!(res, 1);
         assert_eq!(res2, 2);
+    }
+
+    /// Only the device's own runner thread runs a submission inline; a caller thread hands
+    /// its task to that thread, which is why a barrier a caller issues afterwards does see
+    /// it. Both closures below run on the runner, so both must report the inline path.
+    #[test]
+    fn test_runs_inline_only_on_the_runner_thread() {
+        let handle = mock_fixture();
+
+        assert!(!handle.runs_inline(), "a caller thread queues its tasks");
+
+        let submitted = {
+            let inside = handle.clone();
+            handle
+                .submit_blocking(move |_state| inside.runs_inline())
+                .unwrap()
+        };
+        assert!(
+            submitted,
+            "a task submitted from the runner runs right here"
+        );
+
+        let exclusive = {
+            let inside = handle.clone();
+            handle.exclusive(move || inside.runs_inline()).unwrap()
+        };
+        assert!(
+            exclusive,
+            "an exclusive section runs on the runner, so a submit inside it is inline"
+        );
     }
 
     #[test]

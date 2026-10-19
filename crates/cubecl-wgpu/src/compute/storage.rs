@@ -559,11 +559,11 @@ impl WgpuResource {
             // answer. The stall probe of `PoisonWatch::wait_unless_lost` needs
             // a queue, which a pool does not hold, so wgpu's own poll is what
             // surfaces the loss on the next slice.
-            if let Some(poison) = poison {
-                if poison.check().is_err() {
-                    self.buffer.unmap();
-                    return Err(HostAccessError::DeviceLost);
-                }
+            if let Some(poison) = poison
+                && poison.check().is_err()
+            {
+                self.buffer.unmap();
+                return Err(HostAccessError::DeviceLost);
             }
             match receiver.recv_timeout(WAIT_SLICE) {
                 Ok(Ok(())) => return Ok(()),

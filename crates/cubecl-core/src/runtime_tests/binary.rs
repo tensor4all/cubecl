@@ -844,12 +844,12 @@ pub fn test_ieee_constant_folds<R: Runtime>(client: Client) {
     fn folds<F: Float>(x: &[F], out: &mut [F]) {
         if ABSOLUTE_POS < x.len() {
             let v = x[ABSOLUTE_POS];
-            out[ABSOLUTE_POS * 6] = v % F::new(1.0);
+            out[ABSOLUTE_POS * 6] = v % F::new(1.0_f32);
             out[ABSOLUTE_POS * 6 + 1] = v - v;
-            out[ABSOLUTE_POS * 6 + 2] = F::new(0.0) / v;
-            out[ABSOLUTE_POS * 6 + 3] = v * F::new(0.0);
-            out[ABSOLUTE_POS * 6 + 4] = F::new(0.0) + v;
-            out[ABSOLUTE_POS * 6 + 5] = F::new(0.0) % v;
+            out[ABSOLUTE_POS * 6 + 2] = F::new(0.0_f32) / v;
+            out[ABSOLUTE_POS * 6 + 3] = v * F::new(0.0_f32);
+            out[ABSOLUTE_POS * 6 + 4] = F::new(0.0_f32) + v;
+            out[ABSOLUTE_POS * 6 + 5] = F::new(0.0_f32) % v;
         }
     }
 

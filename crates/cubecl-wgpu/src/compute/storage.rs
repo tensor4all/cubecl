@@ -130,6 +130,8 @@ struct AllocationAccess {
 
 impl AllocationAccess {
     fn new(host_visible: bool, device: Option<wgpu::Device>, poison: Option<PoisonWatch>) -> Self {
+        // `try_update` is the new name, but it postdates the oldest toolchain CI builds with.
+        #[allow(deprecated)]
         let allocation_id = NEXT_ALLOCATION_ID
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
                 current.checked_add(1)

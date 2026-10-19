@@ -6,7 +6,7 @@ use std::{
     time::Duration,
 };
 
-use cubecl_server::{
+use t4a_cubecl_server::{
     server::Handle,
     tune::{
         AutotuneBound, Bounds, CloneInputGenerator, OrderedSettings, Patience, ResourceBound,

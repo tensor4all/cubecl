@@ -11,7 +11,7 @@
 use cubecl_core as cubecl;
 use cubecl_core::prelude::*;
 use cubecl_server::runtime::Runtime;
-use cubecl_wgpu::{
+use t4a_cubecl_wgpu::{
     AutoGraphicsApi, RuntimeOptions, WgpuDevice, WgpuRuntime, init_device, init_setup,
 };
 

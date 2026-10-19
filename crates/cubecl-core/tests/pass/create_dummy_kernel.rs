@@ -2,7 +2,7 @@
 //! registration included — that nothing else in the workspace instantiates.
 //! Compiling it here is what keeps that body honest.
 use cubecl::prelude::*;
-use cubecl_core as cubecl;
+use t4a_cubecl_core as cubecl;
 
 #[cube(launch, create_dummy_kernel)]
 fn generic_kernel<F: Float>(input: &[F], output: &mut [F], #[comptime] factor: u32) {

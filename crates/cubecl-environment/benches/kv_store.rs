@@ -9,8 +9,8 @@ use std::hint::black_box;
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 
-use cubecl_environment::collections::HashMap;
-use cubecl_environment::persistence::{Namespace, Store, StoreOptions};
+use t4a_cubecl_environment::collections::HashMap;
+use t4a_cubecl_environment::persistence::{Namespace, Store, StoreOptions};
 
 /// Realistic for an autotune namespace: a few hundred tuned shapes.
 const ENTRIES: usize = 512;
@@ -21,7 +21,7 @@ fn key(index: usize) -> String {
 }
 
 fn warm(root: &std::path::Path) -> Store<String, u32> {
-    cubecl_environment::environment::set_root(root);
+    t4a_cubecl_environment::environment::set_root(root);
     let mut store =
         Store::<String, u32>::new(StoreOptions::new().storage(Namespace::new("device0/matmul")));
 
@@ -109,11 +109,11 @@ fn write_path(criterion: &mut Criterion) {
 /// first-compile read (one storage lookup and decode, nothing retained),
 /// `get` after `get_mut` faulted entries in is a plain map hit.
 fn blob_path(criterion: &mut Criterion) {
-    use cubecl_environment::bytes::Bytes;
-    use cubecl_environment::persistence::CacheOption;
+    use t4a_cubecl_environment::bytes::Bytes;
+    use t4a_cubecl_environment::persistence::CacheOption;
 
     let dir = tempfile::tempdir().unwrap();
-    cubecl_environment::environment::set_root(dir.path());
+    t4a_cubecl_environment::environment::set_root(dir.path());
     let mut store = Store::<String, Bytes>::new(
         StoreOptions::new()
             .storage(Namespace::new("spirv_device0"))
@@ -158,7 +158,7 @@ fn open_path(criterion: &mut Criterion) {
     for entries in [512usize, 4096] {
         let dir = tempfile::tempdir().unwrap();
         {
-            cubecl_environment::environment::set_root(dir.path());
+            t4a_cubecl_environment::environment::set_root(dir.path());
             let mut store = Store::<String, u32>::new(
                 StoreOptions::new().storage(Namespace::new("device0/matmul")),
             );
@@ -169,7 +169,7 @@ fn open_path(criterion: &mut Criterion) {
 
         group.bench_function(format!("kv_store_open_{entries}"), |bencher| {
             bencher.iter(|| {
-                cubecl_environment::environment::set_root(dir.path());
+                t4a_cubecl_environment::environment::set_root(dir.path());
                 let store = Store::<String, u32>::new(
                     StoreOptions::new().storage(Namespace::new("device0/matmul")),
                 );
@@ -184,7 +184,7 @@ fn open_path(criterion: &mut Criterion) {
 /// What a byte-level cache would cost: a decoder run on every read, rather
 /// than once per key ever.
 fn decode_cost(criterion: &mut Criterion) {
-    use cubecl_environment::bytes::Bytes;
+    use t4a_cubecl_environment::bytes::Bytes;
 
     #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Debug)]
     struct TuneValue {

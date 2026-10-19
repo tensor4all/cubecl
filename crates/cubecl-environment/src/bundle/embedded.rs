@@ -97,7 +97,7 @@ impl core::error::Error for EmbeddedBundleError {}
 /// `cargo xtask bundle export --format flat`, so there is none to include here.
 ///
 /// ```ignore
-/// use cubecl_environment::bundle::{self, EmbeddedBundle};
+/// use t4a_cubecl_environment::bundle::{self, EmbeddedBundle};
 ///
 /// static BUNDLE: &[u8] = include_bytes!("../bundles/h100.ccb");
 ///

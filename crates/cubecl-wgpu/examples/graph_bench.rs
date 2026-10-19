@@ -37,8 +37,8 @@ use cubecl_core as cubecl;
 use cubecl_core::prelude::*;
 use cubecl_core::server::Handle;
 use cubecl_server::runtime::Runtime;
-use cubecl_wgpu::WgpuRuntime;
 use std::time::{Duration, Instant};
+use t4a_cubecl_wgpu::WgpuRuntime;
 
 #[cube(launch)]
 fn add_one_tensor(input: &Tensor<f32>, output: &mut Tensor<f32>) {

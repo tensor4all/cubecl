@@ -14,7 +14,7 @@ use cubecl_macros_internal::TypeHash;
 /// Contrived Example:
 ///
 /// ```no_run
-/// # use cubecl_ir::arena::DropBump;
+/// # use t4a_cubecl_ir::arena::DropBump;
 /// struct Wrapper<'a>(&'a mut String);
 ///
 /// impl<'a> Drop for Wrapper<'a> {

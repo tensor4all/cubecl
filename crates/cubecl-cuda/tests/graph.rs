@@ -5,10 +5,10 @@ use cubecl_core as cubecl;
 use cubecl_core::prelude::*;
 use cubecl_core::runtime_tests::capture_status;
 use cubecl_core::server::Handle;
-use cubecl_cuda::{CudaRuntime, ffi_interop::CudaServer};
 use cubecl_environment::stream::StreamId;
 use cubecl_server::runtime::Runtime;
 use std::sync::Mutex;
+use t4a_cubecl_cuda::{CudaRuntime, ffi_interop::CudaServer};
 
 /// Graph capture holds the one cached client's stream for its whole window,
 /// and `CU_STREAM_CAPTURE_MODE_GLOBAL` makes any

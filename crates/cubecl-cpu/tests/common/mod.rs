@@ -1,11 +1,11 @@
 use cubecl_core::prelude::*;
-use cubecl_cpu::CpuRuntime;
 use cubecl_server::config::{
     CubeClRuntimeConfig, RuntimeConfig,
     compilation::{CompilationConfig, F16Evaluation},
 };
 use cubecl_server::runtime::Runtime;
 use std::sync::Once;
+use t4a_cubecl_cpu::CpuRuntime;
 
 /// A client evaluating f16 as `mode`, or as the host chooses where `None`. The mode is read once,
 /// when the runtime builds its device, so each mode has its own test binary.

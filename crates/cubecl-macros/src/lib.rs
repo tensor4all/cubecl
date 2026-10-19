@@ -49,7 +49,7 @@ mod statement;
 /// # Example
 ///
 /// ```ignored
-/// # use cubecl_macros::cube;
+/// # use t4a_cubecl_macros::cube;
 /// #[cube]
 /// fn my_addition(a: u32, b: u32) -> u32 {
 ///     a + b
@@ -182,7 +182,7 @@ pub fn derive_expand(metadata: TokenStream, input: TokenStream) -> TokenStream {
 ///
 /// # Example
 /// ```ignored
-/// #use cubecl_macros::cube;
+/// #use t4a_cubecl_macros::cube;
 /// #fn some_rust_function(a: u32) -> u32 {}
 /// #[cube]
 /// fn do_stuff(input: u32) -> u32 {
@@ -201,7 +201,7 @@ pub fn comptime(input: TokenStream) -> TokenStream {
 ///
 /// # Example
 /// ```ignored
-/// #use cubecl_macros::cube;
+/// #use t4a_cubecl_macros::cube;
 /// #[cube]
 /// fn do_stuff(input: u32) -> u32 {
 ///     let comptime_value = intrinsic! { |scope| u32::elem_size(scope) };
@@ -223,7 +223,7 @@ pub fn intrinsic(_input: TokenStream) -> TokenStream {
 ///
 /// # Example
 /// ```ignored
-/// #use cubecl_macros::cube;
+/// #use t4a_cubecl_macros::cube;
 /// #[cube]
 /// fn do_stuff(input: u32) -> u32 {
 ///     let mut out: u32;
@@ -243,7 +243,7 @@ pub fn gpu_asm(input: TokenStream) -> TokenStream {
 ///
 /// # Example
 /// ```ignored
-/// #use cubecl_macros::cube;
+/// #use t4a_cubecl_macros::cube;
 /// #[cube]
 /// fn do_stuff(#[comptime] input: u32) -> comptime_type!(u32) {
 ///     input + 5   
@@ -262,7 +262,7 @@ pub fn comptime_type(input: TokenStream) -> TokenStream {
 ///
 /// # Example
 /// ```ignored
-/// #use cubecl_macros::cube;
+/// #use t4a_cubecl_macros::cube;
 /// #[cube]
 /// fn do_stuff(input: u32) -> u32 {
 ///     comment!("Add five to the input");
@@ -282,7 +282,7 @@ pub fn comment(input: TokenStream) -> TokenStream {
 ///
 /// # Example
 /// ```ignored
-/// #use cubecl_macros::cube;
+/// #use t4a_cubecl_macros::cube;
 /// #[cube]
 /// fn stop_if_more_than_ten(input: u32)  {
 ///     if input > 10 {

@@ -13,7 +13,7 @@
 use cubecl_core as cubecl;
 use cubecl_core::prelude::*;
 use cubecl_server::runtime::Runtime;
-use cubecl_wgpu::WgpuRuntime;
+use t4a_cubecl_wgpu::WgpuRuntime;
 
 /// Reads the first element of every input into the output, so every input is a
 /// binding of its own.

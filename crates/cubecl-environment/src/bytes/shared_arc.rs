@@ -11,7 +11,7 @@
 //! # Example
 //!
 //! ```
-//! use cubecl_environment::bytes::Bytes;
+//! use t4a_cubecl_environment::bytes::Bytes;
 //!
 //! let bytes = Bytes::from_elems(vec![1u32, 2, 3, 4]);
 //! let shared = bytes.shared();

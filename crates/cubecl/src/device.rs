@@ -31,7 +31,7 @@ pub use cubecl_runtime::runtime::{DeviceUtilization, UtilizationUnavailable};
 /// ```no_run
 /// # #[cfg(feature = "wgpu")]
 /// # fn main() {
-/// use cubecl::Device;
+/// use t4a_cubecl::Device;
 ///
 /// let client = Device::default().client();
 /// println!("running on {}", client.name());
@@ -182,7 +182,7 @@ impl core::error::Error for DeviceUnavailable {}
 /// [`DeviceUnavailable::NotLinked`], not a function that went missing.
 ///
 /// ```no_run
-/// use cubecl::Device;
+/// use t4a_cubecl::Device;
 ///
 /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
 /// // The second GPU if there is one, otherwise whatever this machine has.
@@ -238,7 +238,7 @@ impl Device {
     /// devices, each with an id and a client of its own.
     ///
     /// ```no_run
-    /// use cubecl::{Device, device::WgpuDeviceKind};
+    /// use t4a_cubecl::{Device, device::WgpuDeviceKind};
     ///
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// let client = Device::vulkan(WgpuDeviceKind::default())?.client();
@@ -458,7 +458,7 @@ impl Device {
     /// [`UtilizationUnavailable::NoPreviousReading`].
     ///
     /// ```no_run
-    /// use cubecl::Device;
+    /// use t4a_cubecl::Device;
     ///
     /// match Device::default().utilization() {
     ///     Ok(utilization) => println!("{}% busy", utilization.busy_percent),

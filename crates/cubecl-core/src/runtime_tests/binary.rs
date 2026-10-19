@@ -844,14 +844,21 @@ pub fn test_ieee_constant_folds<R: Runtime>(client: Client) {
     fn folds<F: Float>(x: &[F], out: &mut [F]) {
         if ABSOLUTE_POS < x.len() {
             let v = x[ABSOLUTE_POS];
-            out[ABSOLUTE_POS * 6] = v % F::new(1.0);
+            out[ABSOLUTE_POS * 6] = v % F::new(1.0_f32);
             out[ABSOLUTE_POS * 6 + 1] = v - v;
-            out[ABSOLUTE_POS * 6 + 2] = F::new(0.0) / v;
-            out[ABSOLUTE_POS * 6 + 3] = v * F::new(0.0);
-            out[ABSOLUTE_POS * 6 + 4] = F::new(0.0) + v;
-            out[ABSOLUTE_POS * 6 + 5] = F::new(0.0) % v;
+            out[ABSOLUTE_POS * 6 + 2] = F::new(0.0_f32) / v;
+            out[ABSOLUTE_POS * 6 + 3] = v * F::new(0.0_f32);
+            out[ABSOLUTE_POS * 6 + 4] = F::new(0.0_f32) + v;
+            out[ABSOLUTE_POS * 6 + 5] = F::new(0.0_f32) % v;
         }
     }
+
+    // Not on WGSL: the shader still carries every one of these operations, but the spec lets
+    // an implementation assume no NaN or infinity arises and ignore the sign of a zero, and
+    // the shader compiler folds under that latitude (`NaN - NaN` and `0 / 0` read back as `0`,
+    // `-4 * 0` as `+0`). What this test guards — that cubecl's own IR does not fold them —
+    // holds on every backend; the results WGSL does promise are still checked there.
+    let strict_ieee = client.name() != "wgpu<wgsl>";
 
     macro_rules! check {
         ($ty: ty) => {{
@@ -878,26 +885,38 @@ pub fn test_ieee_constant_folds<R: Runtime>(client: Client) {
                 assert!((at(0, 0) - 0.5 as $ty).abs() <= <$ty>::EPSILON * 4.0);
                 assert_eq!(at(1, 0), 0.0 as $ty);
                 // `fmod(inf, 1)` and `fmod(NaN, 1)` are NaN.
-                assert!(at(4, 0).is_nan(), "fmod(NaN, 1)");
-                assert!(at(5, 0).is_nan(), "fmod(inf, 1)");
+                if strict_ieee {
+                    assert!(at(4, 0).is_nan(), "fmod(NaN, 1)");
+                    assert!(at(5, 0).is_nan(), "fmod(inf, 1)");
+                }
 
                 // `v - v` is `+0` for finite values and NaN for NaN/infinity.
                 assert_eq!(at(0, 1), 0.0 as $ty);
-                assert!(at(4, 1).is_nan(), "NaN - NaN");
-                assert!(at(5, 1).is_nan(), "inf - inf");
+                if strict_ieee {
+                    assert!(at(4, 1).is_nan(), "NaN - NaN");
+                    assert!(at(5, 1).is_nan(), "inf - inf");
+                }
 
                 // `0.0 / v` is NaN for `v = 0`, not `+0`.
-                assert!(at(3, 2).is_nan(), "0 / 0");
+                if strict_ieee {
+                    assert!(at(3, 2).is_nan(), "0 / 0");
+                }
 
                 // `v * 0.0` carries the sign of `v`.
-                assert_eq!(at(2, 3).to_bits(), (-0.0 as $ty).to_bits(), "-4 * 0");
+                if strict_ieee {
+                    assert_eq!(at(2, 3).to_bits(), (-0.0 as $ty).to_bits(), "-4 * 0");
+                }
                 assert_eq!(at(0, 3), 0.0 as $ty);
 
                 // `0.0 + v` is `+0` for both zeros: `+0.0 + -0.0` is `+0.0`.
                 assert_eq!(at(3, 4), 0.0 as $ty);
-                assert_eq!(at(6, 4).to_bits(), (0.0 as $ty).to_bits(), "+0 + -0");
+                if strict_ieee {
+                    assert_eq!(at(6, 4).to_bits(), (0.0 as $ty).to_bits(), "+0 + -0");
+                }
                 // `0.0 % v` is NaN for `v = 0`.
-                assert!(at(3, 5).is_nan(), "0 % 0");
+                if strict_ieee {
+                    assert!(at(3, 5).is_nan(), "0 % 0");
+                }
             }
         }};
     }

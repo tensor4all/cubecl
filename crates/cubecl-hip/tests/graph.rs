@@ -7,9 +7,9 @@ use cubecl_core as cubecl;
 use cubecl_core::prelude::*;
 use cubecl_core::runtime_tests::capture_status;
 use cubecl_core::server::Handle;
-use cubecl_hip::HipRuntime;
 use cubecl_server::runtime::Runtime;
 use std::sync::Mutex;
+use t4a_cubecl_hip::HipRuntime;
 
 /// Graph capture holds the one cached client's stream for its whole window,
 /// so two captures must not overlap — exactly one

@@ -1,8 +1,8 @@
 use tracel_xtask::prelude::*;
 
-// `cubecl-metal` depends on `objc2`, which only compiles on Apple platforms, so it
+// `t4a-cubecl-metal` depends on `objc2`, which only compiles on Apple platforms, so it
 // can't be linted on non-Apple CI runners.
-const CI_EXCLUDED_CRATES: &[&str] = &["cubecl-metal"];
+const CI_EXCLUDED_CRATES: &[&str] = &["t4a-cubecl-metal"];
 
 #[macros::extend_command_args(CheckCmdArgs, Target, CheckSubCommand)]
 pub struct CubeCLCheckCmdArgs {
@@ -53,21 +53,21 @@ pub(crate) fn handle_command(
     // Additional feature-specific checks
     #[cfg(not(target_os = "macos"))]
     build_helpers::custom_crates_check(
-        vec!["cubecl-wgpu"],
+        vec!["t4a-cubecl-wgpu"],
         vec!["--features", "spirv"],
         None,
         None,
         "std with SPIR-V compiler",
     )?;
     build_helpers::custom_crates_check(
-        vec!["cubecl-wgpu"],
+        vec!["t4a-cubecl-wgpu"],
         vec!["--features", "exclusive-memory-only"],
         None,
         None,
         "std with exclusive_memory_only",
     )?;
     build_helpers::custom_crates_check(
-        vec!["cubecl-runtime", "cubecl-server"],
+        vec!["t4a-cubecl-runtime", "t4a-cubecl-server"],
         vec!["--no-default-features"],
         None,
         None,

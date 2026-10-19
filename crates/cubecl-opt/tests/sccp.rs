@@ -3,7 +3,6 @@
 
 //! SCCP integration tests using textual LLVM dialect IR parsing.
 
-use cubecl_opt::passes::sccp::sccp;
 use expect_test::expect;
 use pliron::{
     context::Context,
@@ -14,6 +13,7 @@ use pliron::{
     parsable::parse_from_str,
     result::{ExpectOk, Result},
 };
+use t4a_cubecl_opt::passes::sccp::sccp;
 
 use pliron::{
     builtin::op_interfaces::{NOpdsInterface, NResultsInterface},

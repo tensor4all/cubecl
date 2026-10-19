@@ -130,6 +130,8 @@ struct AllocationAccess {
 
 impl AllocationAccess {
     fn new(host_visible: bool, device: Option<wgpu::Device>, poison: Option<PoisonWatch>) -> Self {
+        // `try_update` is the new name, but it postdates the oldest toolchain CI builds with.
+        #[allow(deprecated)]
         let allocation_id = NEXT_ALLOCATION_ID
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
                 current.checked_add(1)
@@ -559,11 +561,11 @@ impl WgpuResource {
             // answer. The stall probe of `PoisonWatch::wait_unless_lost` needs
             // a queue, which a pool does not hold, so wgpu's own poll is what
             // surfaces the loss on the next slice.
-            if let Some(poison) = poison {
-                if poison.check().is_err() {
-                    self.buffer.unmap();
-                    return Err(HostAccessError::DeviceLost);
-                }
+            if let Some(poison) = poison
+                && poison.check().is_err()
+            {
+                self.buffer.unmap();
+                return Err(HostAccessError::DeviceLost);
             }
             match receiver.recv_timeout(WAIT_SLICE) {
                 Ok(Ok(())) => return Ok(()),

@@ -11,7 +11,7 @@ use crate::{e2m1, ue8m0};
 /// [`per_tensor`](Self::per_tensor) and [`per_block`](Self::per_block) in any order:
 ///
 /// ```
-/// # use cubecl_common::quant::scheme::{QuantScheme, ScaleDtype};
+/// # use t4a_cubecl_common::quant::scheme::{QuantScheme, ScaleDtype};
 /// // One scale for the whole tensor, stored as f32. Also what a scheme with no level resolves to.
 /// QuantScheme::default().per_tensor(ScaleDtype::F32);
 ///

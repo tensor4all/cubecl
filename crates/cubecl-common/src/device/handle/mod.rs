@@ -102,6 +102,14 @@ impl<S: ?Sized + 'static, I: DeviceHandleSpec> DeviceHandle<S, I> {
         self.handle.utilities()
     }
 
+    /// Whether a task submitted from this thread runs right here instead of behind tasks
+    /// other threads already queued: on the device's own runner thread, inside a task.
+    /// Always `false` for a transport that runs a foreign thread's task before its submit
+    /// returns.
+    pub fn runs_inline(&self) -> bool {
+        self.handle.runs_inline()
+    }
+
     pub fn submit_blocking<'a, R: Send, T: FnOnce(&mut S) -> R + Send + 'a>(
         &self,
         task: T,

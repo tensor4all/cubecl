@@ -140,6 +140,20 @@ pub trait DeviceHandleSpec: Sized + Clone {
     /// Retrieves the server utilities for this thread.
     fn utilities(&self) -> ServerUtilitiesHandle;
 
+    /// Whether a task submitted from the calling thread runs right here instead of behind
+    /// tasks other threads already queued.
+    ///
+    /// A transport that runs its submissions inline in submission order answers `true` on
+    /// the thread that owns the service: nothing another thread queued can be ahead of a
+    /// task it runs there, so a barrier it issues orders only against what is already in
+    /// front of the caller, not against the rest of the queue. The default is `false`, which
+    /// is what a transport that hands a foreign submission to the service's thread before
+    /// its submitting call returns needs: the task is then already ahead of any barrier the
+    /// same caller issues afterwards.
+    fn runs_inline(&self) -> bool {
+        false
+    }
+
     /// Doesn't flush the service state, but flushes any task enqueued in the communication
     /// channel.
     ///

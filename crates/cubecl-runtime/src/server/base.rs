@@ -1,4 +1,4 @@
-use super::{CaptureStatus, DeviceCaptures, Handle};
+use super::{CaptureStatus, DeviceCaptures, Handle, pending::PendingWork};
 use crate::kernel::BufferIOAttr;
 use crate::{
     client::Client,
@@ -147,6 +147,13 @@ pub struct ServerUtilities {
     /// The graph captures under way on the device, read-only: the streams update them through
     /// the [`DeviceCaptures`] [`init`](Self::init) returns alongside.
     pub captures: CaptureStatus,
+    /// What each stream of the device has submitted and what a flush has pushed, which
+    /// [`Client::has_pending_work`](crate::client::Client::has_pending_work) answers from.
+    ///
+    /// The clients publish the submissions, after they handed the task to the device; only
+    /// a flush retires them. It is crate-private because the counts mean nothing outside
+    /// the client that maintains them.
+    pub(crate) pending: PendingWork,
 }
 
 /// Defines how the memory layout is determined.
@@ -218,6 +225,7 @@ impl ServerUtilities {
             check_mode: CubeClRuntimeConfig::get().compilation.check_mode,
             initialized_comms: RwLock::new(HashSet::default()),
             captures: captures.status(),
+            pending: PendingWork::new(),
         };
 
         (utilities, captures)

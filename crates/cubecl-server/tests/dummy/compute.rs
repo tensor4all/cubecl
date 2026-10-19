@@ -68,6 +68,8 @@ impl Runtime for DummyRuntime {
 
     type Device = DummyDevice;
 
+    type ExternalStream = ();
+
     fn can_read_tensor(_shape: &Shape, _strides: &Strides) -> bool {
         unimplemented!()
     }

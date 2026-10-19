@@ -247,6 +247,7 @@ impl DeviceService for HipServer {
 impl Runtime for HipRuntime {
     type Server = HipServer;
     type Device = AmdDevice;
+    type ExternalStream = cubecl_hip_sys::hipStream_t;
 
     fn can_read_tensor(shape: &Shape, strides: &Strides) -> bool {
         if shape.is_empty() {

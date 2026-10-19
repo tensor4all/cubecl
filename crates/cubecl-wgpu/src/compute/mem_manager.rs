@@ -1,7 +1,7 @@
 //! A wgpu stream's memories: the main one every buffer a user allocates lives
 //! in, and the ones the stream keeps for its own reads and launches.
 
-use crate::{WgpuResource, WgpuStorage};
+use crate::{PrimaryMemoryMode, WgpuResource, WgpuStorage};
 use cubecl_core::{MemoryConfiguration, server::IoError};
 use cubecl_environment::sync::Arc;
 use cubecl_ir::MemoryDeviceProperties;
@@ -20,23 +20,37 @@ const UNIFORMS: &str = "Uniform GPU Memory";
 
 /// The memory every buffer a user allocates lives in, laid out as `config`
 /// says.
+///
+/// Under [`PrimaryMemoryMode::HostVisible`] every allocation in this pool adds
+/// `MAP_READ | MAP_WRITE`, which is what makes an idle write and a read happen
+/// on the allocation itself instead of through a staging buffer.
 pub(crate) fn main_memory(
     device: &wgpu::Device,
     properties: &MemoryDeviceProperties,
     config: MemoryConfiguration,
+    primary_memory: PrimaryMemoryMode,
     logger: Arc<ServerLogger>,
     use_vulkan_compiler: bool,
 ) -> MemoryManagement<WgpuStorage> {
-    MemoryManagement::from_configuration(
-        WgpuStorage::new(
+    let usages = BufferUsages::STORAGE
+        | BufferUsages::COPY_SRC
+        | BufferUsages::COPY_DST
+        | BufferUsages::INDIRECT;
+    let storage = match primary_memory {
+        PrimaryMemoryMode::DeviceLocal => WgpuStorage::new(
             properties.alignment as usize,
             device.clone(),
-            BufferUsages::STORAGE
-                | BufferUsages::COPY_SRC
-                | BufferUsages::COPY_DST
-                | BufferUsages::INDIRECT,
+            usages,
             use_vulkan_compiler,
         ),
+        PrimaryMemoryMode::HostVisible => WgpuStorage::new_with_host_visibility(
+            properties.alignment as usize,
+            device.clone(),
+            usages,
+        ),
+    };
+    MemoryManagement::from_configuration(
+        storage,
         properties,
         config,
         logger,

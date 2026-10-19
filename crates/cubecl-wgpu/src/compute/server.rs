@@ -8,6 +8,7 @@ use super::storage::{WgpuResource, WgpuStorage};
 use crate::WgpuCompiler;
 use crate::compute::artifact::WgpuArtifactCompiler;
 use crate::compute::pipelines::{MetadataLayout, WgpuPipelines};
+use crate::compute::storage::HostAccessError;
 use crate::schedule::{BindingsResource, ScheduleTask, ScheduledWgpuBackend};
 use alloc::sync::Arc;
 use cubecl_common::pool::LeasePool;
@@ -94,6 +95,9 @@ pub struct WgpuServer<C: WgpuCompiler> {
     /// the client. `end_capture` inserts, `replay` looks up, `graph_destroy`
     /// removes (dropping the [`WgpuGraph`] unpins the buffers it retained).
     graphs: HashMap<GraphId, WgpuGraph>,
+    /// Whether the main pool can be mapped by the host. Device-local servers
+    /// skip the lease check on every binding instead of paying for a lookup.
+    host_visible: bool,
     _compiler: PhantomData<C>,
 }
 
@@ -127,6 +131,7 @@ impl<C: WgpuCompiler> WgpuServer<C> {
         device: wgpu::Device,
         queue: wgpu::Queue,
         tasks_max: usize,
+        primary_memory: crate::PrimaryMemoryMode,
         backend: wgpu::Backend,
         timing_method: TimingMethod,
         utilities: ServerUtilities,
@@ -139,6 +144,7 @@ impl<C: WgpuCompiler> WgpuServer<C> {
             queue.clone(),
             memory_properties,
             memory_config,
+            primary_memory,
             timing_method,
             backend,
             tasks_max,
@@ -182,6 +188,7 @@ impl<C: WgpuCompiler> WgpuServer<C> {
             utilities: Arc::new(utilities),
             shared_bindings_pool: LeasePool::with_capacity(tasks_max * max_streams as usize),
             graphs: HashMap::new(),
+            host_visible: primary_memory == crate::PrimaryMemoryMode::HostVisible,
             _compiler: PhantomData,
         }
     }
@@ -191,7 +198,7 @@ impl<C: WgpuCompiler> WgpuServer<C> {
         stream_id: StreamId,
         bindings: KernelArguments,
         compiler_info: CompilerInfo,
-    ) -> Result<BindingsResource, IoError> {
+    ) -> Result<BindingsResource, ServerError> {
         // Store all the resources we'll be using. This could be eliminated if
         // there was a way to tie the lifetime of the resource to the memory handle.
         let mut resources = Vec::with_capacity(bindings.resources.len());
@@ -210,6 +217,13 @@ impl<C: WgpuCompiler> WgpuServer<C> {
                 }
                 KernelResource::TensorMap(_) => panic!("Tensor map not supported in wgpu"),
             }
+        }
+
+        // A launch naming a leased buffer is refused rather than waiting on the
+        // device thread for the caller to drop its `Bytes`. Device-local pools
+        // skip this loop entirely.
+        if self.host_visible && resources.iter().any(WgpuResource::is_host_leased) {
+            return Err(HostAccessError::Leased.into());
         }
 
         Ok(BindingsResource {
@@ -300,6 +314,7 @@ impl<C: WgpuCompiler> Server for WgpuServer<C> {
             return Box::pin(async move { Err(err) });
         }
 
+        let bindings: Vec<_> = descriptors.iter().map(|desc| desc.handle.clone()).collect();
         let mut streams = vec![stream_id];
         let mut resources = Vec::with_capacity(descriptors.len());
         for desc in descriptors {
@@ -315,14 +330,28 @@ impl<C: WgpuCompiler> Server for WgpuServer<C> {
                 streams.push(desc.handle.stream);
             }
             let stream = self.scheduler.stream(&desc.handle.stream);
-            let resource = match stream.resource(desc.handle) {
+            let binding = desc.handle.clone();
+            let resource = match stream.resource(binding.clone()) {
                 Ok(val) => val,
                 Err(err) => return Box::pin(async move { Err(err.into()) }),
             };
-            resources.push((resource, desc.shape, desc.elem_size));
+            let lease = if resource.is_host_visible() {
+                let guard = stream.memory.guard(binding.memory.descriptor().location());
+                Some((binding.memory, guard))
+            } else {
+                None
+            };
+            resources.push((resource, desc.shape, desc.elem_size, lease));
         }
 
         self.scheduler.execute_streams(streams);
+
+        // Enqueuing the writes that were still queued above can reject one and
+        // taint its destination. Ask again now that they have run their enqueue
+        // path, or this read would hand back bytes a refused write left alone.
+        if let Err(err) = self.scheduler.ensure_written(bindings.iter()) {
+            return Box::pin(async move { Err(err) });
+        }
 
         let stream = self.scheduler.stream(&stream_id);
         stream.read_resources(resources, stream_id)
@@ -513,9 +542,21 @@ impl<C: WgpuCompiler> Server for WgpuServer<C> {
                 }
             });
 
-            let resources = server
-                .prepare_bindings(stream_id, args, compiler_info)
-                .map_err(ServerError::Io)?;
+            // The indirect-dispatch count travels outside `resources`, but the
+            // GPU still reads it. A host mapping on it refuses the launch here.
+            if server.host_visible
+                && let CubeCount::Dynamic(binding) = &count
+            {
+                let resource = server
+                    .scheduler
+                    .stream(&binding.stream)
+                    .resource(binding.clone())?;
+                if resource.is_host_leased() {
+                    return Err(HostAccessError::Leased.into());
+                }
+            }
+
+            let resources = server.prepare_bindings(stream_id, args, compiler_info)?;
 
             let task = ScheduleTask::Execute {
                 pipeline,
@@ -754,6 +795,7 @@ impl<C: WgpuCompiler> Server for WgpuServer<C> {
                 _uniforms: recording.uniform_pins,
                 _shared: recording.shared,
                 written,
+                resources: recording.resources,
             },
         );
         Ok(id)
@@ -793,6 +835,17 @@ impl<C: WgpuCompiler> Server for WgpuServer<C> {
                     .graphs
                     .get(&graph)
                     .expect("checked above; nothing in the scope removes graphs");
+                // A replay references every buffer the recording bound, not only
+                // the ones it writes: a read-only input or an indirect-dispatch
+                // count is just as unusable while the host has it mapped.
+                if server.host_visible
+                    && wgpu_graph
+                        .resources
+                        .iter()
+                        .any(WgpuResource::is_host_leased)
+                {
+                    return Err(HostAccessError::Leased.into());
+                }
                 let stream = server.scheduler.stream(&stream_id);
                 stream.replay_graph(wgpu_graph);
                 Ok(())
@@ -855,5 +908,294 @@ impl<C: WgpuCompiler> ServerStorage for WgpuServer<C> {
             binding.offset_start,
             binding.offset_end,
         )?)
+    }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+mod host_visible_tests {
+    use super::*;
+    use crate::PrimaryMemoryMode;
+    use crate::runtime::test_client_on_cpu;
+    use cubecl_common::bytes::Bytes;
+    use cubecl_core as cubecl;
+    use cubecl_core::MemoryScope;
+
+    /// Adds one to every element, so a read proves the launch's write landed.
+    #[cube(launch)]
+    fn increment(values: &mut [u32]) {
+        if ABSOLUTE_POS < values.len() {
+            values[ABSOLUTE_POS] += 1;
+        }
+    }
+
+    /// A read-only input, so a graph replay references it without writing it.
+    #[cube(launch)]
+    fn copy_values(input: &[u32], output: &mut [u32]) {
+        if ABSOLUTE_POS < output.len() {
+            output[ABSOLUTE_POS] = input[ABSOLUTE_POS];
+        }
+    }
+
+    fn client_or_skip(primary_memory: PrimaryMemoryMode, purpose: &str) -> Option<Client> {
+        match test_client_on_cpu(primary_memory) {
+            Some(client) => Some(client),
+            None => {
+                eprintln!("skipping {purpose}: no CPU adapter with the requested primary memory");
+                None
+            }
+        }
+    }
+
+    fn staging_bytes(client: &Client) -> u64 {
+        client
+            .memory_report(MemoryScope::CurrentStream)
+            .streams
+            .iter()
+            .flat_map(|stream| &stream.auxiliary)
+            .filter(|memory| memory.name.contains("Staging"))
+            .map(|memory| memory.pools.usage().bytes_reserved)
+            .sum()
+    }
+
+    fn in_place_writes() -> usize {
+        crate::compute::stream::HOST_VISIBLE_WRITES_IN_PLACE
+            .load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    #[test]
+    fn a_host_visible_read_is_zero_copy_and_copies_on_write() {
+        let Some(client) = client_or_skip(PrimaryMemoryMode::HostVisible, "host-visible read")
+        else {
+            return;
+        };
+        assert!(
+            client.properties().memory.host_visible_primary(),
+            "the client has to report the guarantee it was brought up with"
+        );
+
+        let handle = client.create_from_slice(u32::as_bytes(&[1, 2, 3, 4]));
+        let before = staging_bytes(&client);
+
+        let mut bytes = client
+            .read_one(handle.clone())
+            .expect("the read maps the buffer");
+        assert_eq!(u32::from_bytes(&bytes), &[1, 2, 3, 4]);
+        assert_eq!(
+            staging_bytes(&client),
+            before,
+            "a zero-copy read must not allocate a staging buffer"
+        );
+
+        bytes[0] = 42;
+        drop(bytes);
+
+        assert_eq!(
+            u32::from_bytes(&client.read_one(handle).unwrap()),
+            &[1, 2, 3, 4],
+            "mutating the read Bytes must copy, never touch the primary buffer"
+        );
+    }
+
+    #[test]
+    fn an_idle_host_visible_write_copies_in_place() {
+        let Some(client) = client_or_skip(PrimaryMemoryMode::HostVisible, "host-visible write")
+        else {
+            return;
+        };
+
+        let handle = client.create_from_slice(&[0u8; 16]);
+        let before = staging_bytes(&client);
+        let writes = in_place_writes();
+
+        client.write(&handle, Bytes::from_bytes_vec(vec![7; 16]));
+        let bytes = client.read_one(handle).expect("the write landed");
+        assert_eq!(&bytes[..], &[7; 16]);
+        assert_eq!(
+            staging_bytes(&client),
+            before,
+            "an idle whole-buffer write does not allocate a staging buffer"
+        );
+        assert!(
+            in_place_writes() > writes,
+            "an idle whole-buffer write goes in place"
+        );
+    }
+
+    #[test]
+    fn a_one_byte_host_visible_write_preserves_the_other_fifteen() {
+        let Some(client) = client_or_skip(PrimaryMemoryMode::HostVisible, "partial host write")
+        else {
+            return;
+        };
+
+        let handle = client.create_from_slice(&[1u8; 16]);
+        let writes = in_place_writes();
+
+        client.write(&handle, Bytes::from_bytes_vec(vec![9]));
+        let bytes = client.read_one(handle).expect("the write landed");
+        assert_eq!(&bytes[..1], &[9]);
+        assert_eq!(&bytes[1..], &[1; 15]);
+        assert!(
+            in_place_writes() > writes,
+            "a partial write into an idle host-visible buffer maps in place"
+        );
+    }
+
+    #[test]
+    fn a_write_larger_than_the_resource_is_rejected() {
+        let Some(client) = client_or_skip(PrimaryMemoryMode::HostVisible, "oversized write") else {
+            return;
+        };
+
+        let handle = client.create_from_slice(&[1u8; 16]);
+        client.write(&handle, Bytes::from_bytes_vec(vec![7; 32]));
+
+        let error = client
+            .read_one(handle)
+            .expect_err("an oversized write must not reach the buffer")
+            .to_string();
+        assert!(
+            error.contains("exceeds the 16-byte resource"),
+            "the rejection has to name the logical size, got: {error}"
+        );
+    }
+
+    #[test]
+    fn an_unaligned_partial_device_local_write_is_refused() {
+        let Some(client) =
+            client_or_skip(PrimaryMemoryMode::DeviceLocal, "device-local partial write")
+        else {
+            return;
+        };
+
+        let handle = client.create_from_slice(&[1u8; 16]);
+        client.write(&handle, Bytes::from_bytes_vec(vec![9]));
+
+        let error = client
+            .read_one(handle)
+            .expect_err("staging cannot preserve an untouched unaligned tail")
+            .to_string();
+        assert!(
+            error.contains("unaligned partial write"),
+            "the refusal has to name the unaligned partial write, got: {error}"
+        );
+    }
+
+    #[test]
+    fn a_launch_writing_a_leased_buffer_is_refused() {
+        let Some(client) = client_or_skip(PrimaryMemoryMode::HostVisible, "host-visible lease")
+        else {
+            return;
+        };
+
+        let handle = client.create_from_slice(u32::as_bytes(&[1, 2, 3, 4]));
+        let leased = client
+            .read_one(handle.clone())
+            .expect("the read maps the buffer");
+
+        increment::launch(
+            &client,
+            CubeCount::Static(1, 1, 1),
+            CubeDim::new_1d(4),
+            unsafe { BufferArg::from_raw_parts(handle.clone(), 4) },
+        );
+        // The launch is queued on the device thread asynchronously. Drain it
+        // while the lease is still alive so the refusal is what this test sees.
+        let _ = cubecl_environment::future::block_on(client.sync_buffers([&handle]));
+        drop(leased);
+
+        let error = client
+            .read_one(handle)
+            .expect_err("a launch that wrote a leased buffer must be refused")
+            .to_string();
+        assert!(
+            error.contains("mapped by the host"),
+            "the refusal has to name the live host mapping, got: {error}"
+        );
+    }
+
+    #[test]
+    fn a_launch_reading_a_leased_dynamic_cube_count_is_refused() {
+        let Some(client) = client_or_skip(PrimaryMemoryMode::HostVisible, "leased cube count")
+        else {
+            return;
+        };
+
+        let count = client.create_from_slice(u32::as_bytes(&[1, 1, 1]));
+        let output = client.empty(4);
+        let leased = client
+            .read_one(count.clone())
+            .expect("the read maps the count buffer");
+
+        increment::launch(
+            &client,
+            CubeCount::Dynamic(count.clone().binding()),
+            CubeDim::new_1d(1),
+            unsafe { BufferArg::from_raw_parts(output.clone(), 1) },
+        );
+        client.flush().expect("the launch task is enqueued");
+        drop(leased);
+
+        let error = client
+            .read_one(output)
+            .expect_err("a launch reading a leased cube count must be refused")
+            .to_string();
+        assert!(
+            error.contains("mapped by the host"),
+            "the refusal has to name the live host mapping, got: {error}"
+        );
+    }
+
+    #[test]
+    fn a_replay_referencing_a_leased_read_only_input_is_refused() {
+        let Some(client) = client_or_skip(PrimaryMemoryMode::HostVisible, "graph replay lease")
+        else {
+            return;
+        };
+
+        let input = client.create_from_slice(u32::as_bytes(&[1, 2, 3, 4]));
+        let output = client.empty(4 * core::mem::size_of::<u32>());
+        let launch = |client: &Client| {
+            copy_values::launch(
+                client,
+                CubeCount::Static(1, 1, 1),
+                CubeDim::new_1d(4),
+                unsafe { BufferArg::from_raw_parts(input.clone(), 4) },
+                unsafe { BufferArg::from_raw_parts(output.clone(), 4) },
+            );
+        };
+
+        client.graph_prepare().expect("graph_prepare");
+        launch(&client);
+        let _ = client.read_one(output.clone()).expect("the warmup ran");
+
+        client.start_capture().expect("start_capture");
+        launch(&client);
+        let graph = client.stop_capture().expect("stop_capture");
+
+        let leased = client
+            .read_one(input.clone())
+            .expect("the read maps the read-only input");
+        let error = unsafe { graph.replay() }
+            .expect_err("a replay referencing a leased input must be refused")
+            .to_string();
+        assert!(
+            error.contains("mapped by the host"),
+            "the refusal has to name the live host mapping, got: {error}"
+        );
+
+        drop(leased);
+        drop(graph);
+    }
+
+    #[test]
+    fn a_device_local_client_does_not_claim_host_visibility() {
+        let Some(client) =
+            client_or_skip(PrimaryMemoryMode::DeviceLocal, "device-local capability")
+        else {
+            return;
+        };
+
+        assert!(!client.properties().memory.host_visible_primary());
     }
 }

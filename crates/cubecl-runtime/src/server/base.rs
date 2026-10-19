@@ -657,7 +657,95 @@ impl ServerError {
     pub fn graph_capture_unsupported() -> Self {
         Self::graph_state("graph capture is not supported by this backend")
     }
+
+    /// The error a backend leaves on an external operation's outputs when it
+    /// has no support for queueing one at all. Like a refused launch, it is
+    /// recorded on the buffers the operation would have written, so a read of
+    /// one of them reports it.
+    pub fn external_op_unsupported() -> Self {
+        Self::Generic {
+            reason: String::from("external operations are not supported by this backend"),
+            backtrace: BackTrace::capture(),
+        }
+    }
 }
+
+/// The arguments of an external operation, and the owners it keeps alive.
+///
+/// The operation registers owners with [`retain`](Self::retain) *before* it
+/// enqueues work that reads them. The server holds every registered owner and
+/// the bindings until the work already queued on the stream has completed, on
+/// every exit: success, error, and panic. That is what lets a vendor call read
+/// a host workspace asynchronously without the caller managing its lifetime.
+pub struct ExternalContext<'a, S> {
+    stream: S,
+    reads: &'a [u64],
+    writes: &'a [u64],
+    retained: Vec<Box<dyn core::any::Any + Send>>,
+}
+
+impl<'a, S: Copy> ExternalContext<'a, S> {
+    /// Build the context a server hands its erased callback.
+    ///
+    /// A backend and the client's typed wrapper are the only callers; user code
+    /// receives it as the argument of [`Client::external_op`](crate::client::Client::external_op).
+    #[doc(hidden)]
+    pub fn new(stream: S, reads: &'a [u64], writes: &'a [u64]) -> Self {
+        Self {
+            stream,
+            reads,
+            writes,
+            retained: Vec::new(),
+        }
+    }
+
+    /// The native stream the operation is enqueued on.
+    pub fn stream(&self) -> S {
+        self.stream
+    }
+
+    /// The device addresses of the declared reads.
+    pub fn reads(&self) -> &[u64] {
+        self.reads
+    }
+
+    /// The device addresses of the declared writes.
+    pub fn writes(&self) -> &[u64] {
+        self.writes
+    }
+
+    /// Keep `owner` alive until the enqueued work has completed, whatever the
+    /// operation returns.
+    pub fn retain(&mut self, owner: impl core::any::Any + Send) {
+        self.retained.push(Box::new(owner));
+    }
+}
+
+impl<S> ExternalContext<'_, S> {
+    /// The owners registered on this context, for the server to defer.
+    #[doc(hidden)]
+    pub fn into_retained(self) -> Vec<Box<dyn core::any::Any + Send>> {
+        self.retained
+    }
+}
+
+impl<S> core::fmt::Debug for ExternalContext<'_, S> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ExternalContext")
+            .field("reads", &self.reads.len())
+            .field("writes", &self.writes.len())
+            .field("retained", &self.retained.len())
+            .finish()
+    }
+}
+
+/// The type-erased external operation a server runs. The client's wrapper
+/// downcasts the stream to the runtime's native type before calling user code.
+#[doc(hidden)]
+pub type ExternalOpCallback = Box<
+    dyn for<'a> FnOnce(&mut ExternalContext<'a, &'a dyn core::any::Any>) -> Result<(), ServerError>
+        + Send,
+>;
 
 /// The compute server is responsible for handling resources and computations over resources.
 ///
@@ -761,6 +849,25 @@ pub trait Server:
         bindings: KernelArguments,
         stream_id: StreamId,
         launch_mode: LaunchMode,
+    );
+
+    /// Queue `op` behind the work already on `stream_id`, reading `reads` and
+    /// writing `writes`, exactly as a launch would be ordered.
+    ///
+    /// The operation receives the backend's native stream and the device
+    /// addresses of its bindings, never a server-internal type. A backend that
+    /// cannot run one refuses it on `writes`; there is no default, because a
+    /// backend's failure store is the only place the refusal belongs.
+    ///
+    /// `op` is already type-erased: the client has checked that its runtime
+    /// matches this server and that every handle is local before submitting,
+    /// and its wrapper downcasts the stream to the runtime's native type.
+    fn external_op(
+        &mut self,
+        reads: Vec<BufferBinding>,
+        writes: Vec<BufferBinding>,
+        op: ExternalOpCallback,
+        stream_id: StreamId,
     );
 
     /// Flush all outstanding tasks in the server.

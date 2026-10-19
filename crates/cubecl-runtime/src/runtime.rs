@@ -16,6 +16,13 @@ pub trait Runtime: Sized + Send + Sync + 'static + core::fmt::Debug + Clone {
     type Server: ServerStorage;
     /// The device used to retrieve the compute client.
     type Device: Device;
+    /// The native stream an external operation is enqueued on: the CUDA
+    /// `CUstream`, the HIP `hipStream_t`, or `()` on a runtime whose external
+    /// operations run on the host.
+    ///
+    /// Deliberately not `Send`: the stream is created and used on the device
+    /// thread, and the queued callback is the only part that crosses threads.
+    type ExternalStream: Copy + 'static;
 
     /// Retrieve the compute client from the runtime device, initializing the
     /// server on first use.

@@ -14,22 +14,22 @@ pub(crate) fn handle_command(
 ) -> anyhow::Result<()> {
     if args.ci {
         args.exclude.extend(vec![
-            "cubecl-cuda".to_string(),
-            "cubecl-hip".to_string(),
-            "cubecl-metal".to_string(),
+            "t4a-cubecl-cuda".to_string(),
+            "t4a-cubecl-hip".to_string(),
+            "t4a-cubecl-metal".to_string(),
         ]);
     }
     base_commands::build::handle_command(args.try_into().unwrap(), env, context)?;
     // Additional feature-specific builds
     build_helpers::custom_crates_build(
-        vec!["cubecl-wgpu"],
+        vec!["t4a-cubecl-wgpu"],
         vec!["--features", "spirv"],
         None,
         None,
         "std with SPIR-V compiler",
     )?;
     build_helpers::custom_crates_build(
-        vec!["cubecl-runtime", "cubecl-server"],
+        vec!["t4a-cubecl-runtime", "t4a-cubecl-server"],
         vec!["--no-default-features"],
         None,
         None,

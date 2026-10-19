@@ -4,11 +4,6 @@ use cubecl_ir::{
     interfaces::side_effects::{MemoryEffect, MemoryEffectsOp},
     prelude::*,
 };
-use cubecl_opt::analyses::dataflow_solver::{
-    AnalysisState, DataflowSolver, ProgramPoint, ReadRef,
-    dense::{self, DenseLattice},
-    pre::{AnticipatedExpressions, AvailableExpressions, Computes, compute_lcm_analyses},
-};
 use expect_test::expect;
 use itertools::Itertools;
 use pliron::{
@@ -20,6 +15,11 @@ use pliron::{
     parsable::parse_from_str,
     printable::Printable,
     result::ExpectOk,
+};
+use t4a_cubecl_opt::analyses::dataflow_solver::{
+    AnalysisState, DataflowSolver, ProgramPoint, ReadRef,
+    dense::{self, DenseLattice},
+    pre::{AnticipatedExpressions, AvailableExpressions, Computes, compute_lcm_analyses},
 };
 
 #[pliron_op(

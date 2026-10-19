@@ -14,7 +14,7 @@
 //! # Example
 //!
 //! ```
-//! use cubecl_environment::bytes::{Bytes, AllocationProperty};
+//! use t4a_cubecl_environment::bytes::{Bytes, AllocationProperty};
 //!
 //! // Zero-copy from static data
 //! static DATA: &[u8] = &[1, 2, 3, 4];
@@ -68,7 +68,7 @@ impl SharedBytesAllocationController {
     /// # Example
     ///
     /// ```
-    /// use cubecl_environment::bytes::{SharedBytesAllocationController, AllocationProperty};
+    /// use t4a_cubecl_environment::bytes::{SharedBytesAllocationController, AllocationProperty};
     ///
     /// // From static data (zero-copy, no heap allocation)
     /// let static_bytes = bytes::Bytes::from_static(&[1, 2, 3, 4]);

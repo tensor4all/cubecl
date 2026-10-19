@@ -2,7 +2,7 @@
 //! A browser store opened before `environment::open()` was awaited: its own
 //! module, so that no other test has opened the database for it.
 
-use cubecl_environment::persistence::{Namespace, Store, StoreOptions};
+use t4a_cubecl_environment::persistence::{Namespace, Store, StoreOptions};
 use wasm_bindgen_test::*;
 
 wasm_bindgen_test_configure!(run_in_dedicated_worker);

@@ -1,12 +1,12 @@
 use cubecl_ir::MemoryDeviceProperties;
-use cubecl_server::{
+use std::{collections::LinkedList, sync::Arc};
+use t4a_cubecl_server::{
     logging::ServerLogger,
     memory_management::{
         ErrorGraph, MemoryConfiguration, MemoryManagement, MemoryManagementOptions, PageUpdate,
     },
     storage::BytesStorage,
 };
-use std::{collections::LinkedList, sync::Arc};
 
 const MB: u64 = 1024 * 1024;
 

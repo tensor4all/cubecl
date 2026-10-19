@@ -7,8 +7,8 @@
 //! non-null precondition and SIGABRT the process.
 
 use cubecl_core::prelude::*;
-use cubecl_hip::HipRuntime;
 use cubecl_server::runtime::Runtime;
+use t4a_cubecl_hip::HipRuntime;
 
 #[test]
 fn read_empty_buffer() {

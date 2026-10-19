@@ -1,6 +1,6 @@
 use criterion::{Criterion, criterion_group, criterion_main};
-use cubecl_common::{device::DeviceService, device_handle::DeviceHandle};
 use cubecl_environment::sync::Mutex;
+use t4a_cubecl_common::{device::DeviceService, device_handle::DeviceHandle};
 
 use std::{hint::black_box, sync::Arc};
 
@@ -35,7 +35,7 @@ impl TestService {
 }
 
 impl DeviceService for TestService {
-    fn init(_device_id: cubecl_common::device::DeviceId) -> Self {
+    fn init(_device_id: t4a_cubecl_common::device::DeviceId) -> Self {
         Self::default()
     }
 
@@ -45,7 +45,7 @@ impl DeviceService for TestService {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    let device_handle = DeviceHandle::<TestService>::new(cubecl_common::device::DeviceId {
+    let device_handle = DeviceHandle::<TestService>::new(t4a_cubecl_common::device::DeviceId {
         type_id: 0,
         index_id: 0,
     });

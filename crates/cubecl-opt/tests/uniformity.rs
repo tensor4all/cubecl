@@ -4,14 +4,6 @@ use cubecl_ir::{
     prelude::{IRNode, SingleBlockRegionInterface},
     rewrite::{WALKCONFIG_ANY, visit_all_values},
 };
-use cubecl_opt::{
-    analyses::dataflow_solver::{
-        DataflowSolver,
-        control_flow_uniformity::BlockUniformity,
-        value_uniformity::{DynamicUniformityLattice, StrictUniformityLattice},
-    },
-    passes::uniformity::uniformity_solver,
-};
 use pliron::{
     basic_block::BasicBlock,
     builtin::ops::ModuleOp,
@@ -25,6 +17,14 @@ use pliron::{
     parsable::parse_from_str,
     result::{ExpectOk, Result},
     value::Value,
+};
+use t4a_cubecl_opt::{
+    analyses::dataflow_solver::{
+        DataflowSolver,
+        control_flow_uniformity::BlockUniformity,
+        value_uniformity::{DynamicUniformityLattice, StrictUniformityLattice},
+    },
+    passes::uniformity::uniformity_solver,
 };
 
 fn run_uniformity_on_text(ctx: &mut Context, input: &str) -> Result<(ModuleOp, DataflowSolver)> {

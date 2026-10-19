@@ -6,9 +6,9 @@
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use cubecl_environment::bytes::Bytes;
-use cubecl_environment::collections::HashMap;
-use cubecl_environment::persistence::{Insertion, Origin, Storage, Store, StoreOptions};
+use t4a_cubecl_environment::bytes::Bytes;
+use t4a_cubecl_environment::collections::HashMap;
+use t4a_cubecl_environment::persistence::{Insertion, Origin, Storage, Store, StoreOptions};
 
 /// Shared so the test can read the counters while the store owns the storage.
 #[derive(Debug, Clone, Default)]

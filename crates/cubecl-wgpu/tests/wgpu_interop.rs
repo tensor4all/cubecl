@@ -10,7 +10,7 @@ use cubecl_core::prelude::*;
 use cubecl_environment::future::block_on;
 use cubecl_environment::stream::StreamId;
 use cubecl_server::runtime::Runtime;
-use cubecl_wgpu::{
+use t4a_cubecl_wgpu::{
     AutoCompiler, MemoryConfiguration, Metal, PrimaryMemoryMode, RuntimeOptions, WgpuDevice,
     WgpuDeviceKind, WgpuRuntime, WgpuServer, init_device_for_graphics_api, wgpu,
 };

@@ -28,19 +28,19 @@
 
 use cubecl_environment::stream::StreamId;
 use cubecl_ir::MemoryDeviceProperties;
-use cubecl_server::id::KernelId;
-use cubecl_server::logging::ServerLogger;
-use cubecl_server::memory_management::{Cleanup, PageUpdate};
-use cubecl_server::memory_management::{
+use std::sync::Arc;
+use t4a_cubecl_server::id::KernelId;
+use t4a_cubecl_server::logging::ServerLogger;
+use t4a_cubecl_server::memory_management::{Cleanup, PageUpdate};
+use t4a_cubecl_server::memory_management::{
     ErrorGraph, FailureId, MemoryConfiguration, MemoryManagement, MemoryManagementOptions,
 };
-use cubecl_server::server::{BufferBinding, Handle, ServerError};
-use cubecl_server::storage::BytesStorage;
-use cubecl_server::stream::{
+use t4a_cubecl_server::server::{BufferBinding, Handle, ServerError};
+use t4a_cubecl_server::storage::BytesStorage;
+use t4a_cubecl_server::stream::{
     ExecuteScope, FailureStore, Failures, ScopedOutcome, StreamCapture, StreamFactory,
     StreamMemory, StreamPool, WriteScoped,
 };
-use std::sync::Arc;
 
 /// A service for handles that never reach a device.
 fn service() -> cubecl_common::device::ServiceId {

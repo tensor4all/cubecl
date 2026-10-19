@@ -1,9 +1,9 @@
-use cubecl_server::{
+use derive_new::new;
+use t4a_cubecl_server::{
     client::Client,
     kernel::BufferIOAttr,
     server::{CubeCount, Handle, KernelArguments},
 };
-use derive_new::new;
 
 use crate::dummy::KernelTask;
 

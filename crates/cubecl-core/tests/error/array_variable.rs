@@ -1,5 +1,5 @@
 use cubecl::prelude::*;
-use cubecl_core as cubecl;
+use t4a_cubecl_core as cubecl;
 
 #[cube]
 fn array_variable(x: u32, y: u32) {

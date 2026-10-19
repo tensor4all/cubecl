@@ -13,8 +13,8 @@ use cubecl_core::server::Handle;
 use cubecl_environment::stream::StreamId;
 use cubecl_server::config::{CubeClRuntimeConfig, RuntimeConfig};
 use cubecl_server::runtime::Runtime;
-use cubecl_wgpu::WgpuRuntime;
 use std::sync::Mutex;
+use t4a_cubecl_wgpu::WgpuRuntime;
 
 /// Test threads share the cached client, and the scheduler's stream pool can
 /// map two test threads' stream ids onto the same backend stream — where two

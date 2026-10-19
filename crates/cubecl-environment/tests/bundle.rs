@@ -1,11 +1,11 @@
 #![cfg(all(feature = "persistence", not(target_family = "wasm")))]
 
-use cubecl_environment::bundle::{
+use t4a_cubecl_environment::bundle::{
     Bundle, BundleError, BundleFormat, BundleManifest, EmbeddedBundle, ExportOptions, SqliteBundle,
     export, import,
 };
-use cubecl_environment::bytes::Bytes;
-use cubecl_environment::persistence::{Namespace, Store, StoreOptions};
+use t4a_cubecl_environment::bytes::Bytes;
+use t4a_cubecl_environment::persistence::{Namespace, Store, StoreOptions};
 
 // Storage resolves through the process-global active environment, so these
 // tests are serialized: only one environment is active at a time by design.
@@ -13,7 +13,7 @@ use cubecl_environment::persistence::{Namespace, Store, StoreOptions};
 /// Pins the environment to `root`, which is process-global; every test here
 /// is serialized for that reason.
 fn options(root: &std::path::Path, name: &str, path: &str) -> StoreOptions {
-    cubecl_environment::environment::set_root(root);
+    t4a_cubecl_environment::environment::set_root(root);
     StoreOptions::new().storage(Namespace::scoped(name, path))
 }
 
@@ -59,8 +59,8 @@ fn export_roots(
 fn import_into(
     root: &std::path::Path,
     bundle: &dyn Bundle,
-) -> cubecl_environment::bundle::ImportReport {
-    cubecl_environment::environment::set_root(root);
+) -> t4a_cubecl_environment::bundle::ImportReport {
+    t4a_cubecl_environment::environment::set_root(root);
     import(bundle)
 }
 
@@ -248,7 +248,7 @@ fn a_cache_root_lists_its_namespaces() {
 
     let version = env!("CARGO_PKG_VERSION");
 
-    let summary = cubecl_environment::environment::namespaces();
+    let summary = t4a_cubecl_environment::environment::namespaces();
     assert_eq!(
         summary
             .iter()
@@ -282,7 +282,7 @@ fn a_bundle_file_summarizes_its_namespaces() {
     );
     export_to(root.path(), &bundle_path, BundleFormat::Sqlite);
 
-    let expected = cubecl_environment::environment::namespaces();
+    let expected = t4a_cubecl_environment::environment::namespaces();
     let bundle = SqliteBundle::open(&bundle_path).unwrap();
     assert_eq!(bundle.summary(), expected);
 }
@@ -615,7 +615,7 @@ fn a_foreign_file_is_not_a_bundle() {
 #[test]
 #[serial_test::serial]
 fn environments_are_isolated_and_switchable() {
-    use cubecl_environment::environment;
+    use t4a_cubecl_environment::environment;
 
     let root = tempfile::tempdir().unwrap();
 
@@ -659,7 +659,7 @@ fn environments_are_isolated_and_switchable() {
 #[test]
 #[serial_test::serial]
 fn a_saved_bundle_can_be_loaded_in_place() {
-    use cubecl_environment::environment;
+    use t4a_cubecl_environment::environment;
 
     let warm_root = tempfile::tempdir().unwrap();
     let cold_root = tempfile::tempdir().unwrap();
@@ -698,7 +698,7 @@ fn a_saved_bundle_can_be_loaded_in_place() {
 #[test]
 #[serial_test::serial]
 fn importing_targets_the_active_environment() {
-    use cubecl_environment::environment;
+    use t4a_cubecl_environment::environment;
 
     let warm_root = tempfile::tempdir().unwrap();
     let bundle_dir = tempfile::tempdir().unwrap();
@@ -732,14 +732,14 @@ fn importing_targets_the_active_environment() {
 #[test]
 #[serial_test::serial]
 fn a_local_blob_replaces_a_stale_imported_one() {
-    use cubecl_environment::persistence::CacheOption;
+    use t4a_cubecl_environment::persistence::CacheOption;
 
     let source = tempfile::tempdir().unwrap();
     let target = tempfile::tempdir().unwrap();
     let bundle_path = source.path().join("ship.bundle");
 
     let kernels = |root: &std::path::Path| {
-        cubecl_environment::environment::set_root(root);
+        t4a_cubecl_environment::environment::set_root(root);
         Store::<String, Bytes>::new(
             StoreOptions::new()
                 .storage(Namespace::new("spirv"))
@@ -753,7 +753,7 @@ fn a_local_blob_replaces_a_stale_imported_one() {
     export_to(source.path(), &bundle_path, BundleFormat::Sqlite);
 
     let bundle = open_bundle(&bundle_path, BundleFormat::Sqlite);
-    cubecl_environment::environment::set_root(target.path());
+    t4a_cubecl_environment::environment::set_root(target.path());
     assert_eq!(import_into(target.path(), bundle.as_ref()).imported, 1);
 
     // The machine compiles a different kernel for the same key.
@@ -839,8 +839,8 @@ fn a_bundle_installed_read_only_still_imports() {
 #[test]
 #[serial_test::serial]
 fn a_bundle_installed_read_only_can_be_loaded_in_place() {
-    use cubecl_environment::environment;
     use std::os::unix::fs::PermissionsExt;
+    use t4a_cubecl_environment::environment;
 
     let source = tempfile::tempdir().unwrap();
     let installed = tempfile::tempdir().unwrap();
@@ -912,7 +912,7 @@ fn a_shipped_bundle_is_a_single_rollback_journal_file() {
 
     // And it is still a bundle this build reads: the rewritten field must not
     // cost the engine its own WAL.
-    let expected = cubecl_environment::environment::namespaces();
+    let expected = t4a_cubecl_environment::environment::namespaces();
     let opened = SqliteBundle::open(&bundle).unwrap();
     assert_eq!(opened.summary(), expected);
 
@@ -937,7 +937,7 @@ fn exporting_from_a_read_only_root_works() {
     let bundle_path = bundle_dir.path().join("from-read-only.bundle");
 
     warm(source.path(), "autotune", "device0/matmul", &[("k", 7)]);
-    let database = cubecl_environment::environment::path();
+    let database = t4a_cubecl_environment::environment::path();
 
     let original = std::fs::metadata(source.path()).unwrap().permissions();
     std::fs::set_permissions(&database, std::fs::Permissions::from_mode(0o444)).unwrap();
@@ -983,7 +983,7 @@ fn exporting_over_an_older_schema_bundle_replaces_it() {
 
     // Age the file: rewrite its schema version.
     {
-        use cubecl_environment::future::block_on;
+        use t4a_cubecl_environment::future::block_on;
 
         let database =
             block_on(turso::Builder::new_local(bundle_path.to_str().unwrap()).build()).unwrap();

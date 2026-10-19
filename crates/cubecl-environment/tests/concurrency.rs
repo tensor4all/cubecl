@@ -6,7 +6,7 @@
 //! a mutex. These tests run enough work in parallel that a connection shared
 //! without one would be used twice at once.
 
-use cubecl_environment::persistence::{Namespace, Store, StoreOptions};
+use t4a_cubecl_environment::persistence::{Namespace, Store, StoreOptions};
 
 /// Entries per thread. Enough to keep several operations in flight at once.
 const ENTRIES: u32 = 32;
@@ -27,7 +27,7 @@ fn open() -> Store<String, u32> {
 #[cfg_attr(miri, ignore)]
 fn concurrent_writers_do_not_lose_entries() {
     let root = tempfile::tempdir().unwrap();
-    cubecl_environment::environment::set_root(root.path());
+    t4a_cubecl_environment::environment::set_root(root.path());
 
     std::thread::scope(|scope| {
         for thread in 0..THREADS {
@@ -58,7 +58,7 @@ fn concurrent_writers_do_not_lose_entries() {
 #[cfg_attr(miri, ignore)]
 fn readers_run_alongside_a_writer() {
     let root = tempfile::tempdir().unwrap();
-    cubecl_environment::environment::set_root(root.path());
+    t4a_cubecl_environment::environment::set_root(root.path());
 
     open().insert(key(0, 0), 7).unwrap();
 

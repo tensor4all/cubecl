@@ -25,4 +25,45 @@ mod tests {
     cubecl_core::testgen_launch_dynamic_count!();
     cubecl_core::testgen_profiling!();
     cubecl_core::testgen_profiling_nested!();
+
+    fn external_op_copy(
+        stream: cubecl_hip_sys::hipStream_t,
+        src: u64,
+        dst: u64,
+        len: u64,
+    ) -> Result<(), cubecl_core::server::ServerError> {
+        // SAFETY: the test keeps both allocations alive until the stream has
+        // run the copy and the read that follows it.
+        let status = unsafe {
+            cubecl_hip_sys::hipMemcpyDtoDAsync(
+                dst as *mut core::ffi::c_void,
+                src as *mut core::ffi::c_void,
+                len as usize,
+                stream,
+            )
+        };
+        cubecl_server::driver::checked("hipMemcpyDtoDAsync", status)?;
+        Ok(())
+    }
+
+    fn external_op_fill(
+        stream: cubecl_hip_sys::hipStream_t,
+        dst: u64,
+        len: u64,
+        value: u32,
+    ) -> Result<(), cubecl_core::server::ServerError> {
+        // SAFETY: the test fills a live device allocation of `len` bytes.
+        let status = unsafe {
+            cubecl_hip_sys::hipMemsetD32Async(
+                dst as *mut core::ffi::c_void,
+                value as core::ffi::c_int,
+                len as usize / core::mem::size_of::<u32>(),
+                stream,
+            )
+        };
+        cubecl_server::driver::checked("hipMemsetD32Async", status)?;
+        Ok(())
+    }
+
+    cubecl_core::testgen_external_op!(external_op_copy, external_op_fill, true);
 }

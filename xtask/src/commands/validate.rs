@@ -36,7 +36,7 @@ pub fn handle_command(
     })?;
 
     // Lint. The base check command silently ignores `--exclude` for `--target workspace`,
-    // so the Apple-only `cubecl-metal` (which pulls in `objc2`) can't be dropped that way.
+    // so the Apple-only `t4a-cubecl-metal` (which pulls in `objc2`) can't be dropped that way.
     // On non-Apple hosts, reuse check.rs's `run_ci_lint`, which builds the clippy command
     // by hand with `--exclude`; on macOS, lint the full workspace as before.
     #[cfg(target_os = "macos")]

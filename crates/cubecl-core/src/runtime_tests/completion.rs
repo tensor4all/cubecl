@@ -69,7 +69,11 @@ pub fn test_completion_after_launch<R: Runtime>(client: Client) {
 /// The later work is gated on a flag another stream releases, so this observes
 /// the first boundary pass while the second is still held. It needs two streams:
 /// wgpu puts both on one queue, where a later write cannot pass the gate, so
-/// that backend does not generate this test.
+/// that backend does not generate this test. Neither do the GPU runtimes: a
+/// kernel spinning on the gate holds the device, and any implicitly
+/// device-wide synchronisation another test triggers meanwhile (an allocation,
+/// a free) waits on it while the release waits behind that, so the suite can
+/// hang. The CPU runtime runs it, where the gate is deterministic.
 pub fn test_completion_boundary_is_fixed<R: Runtime>(client: Client) {
     let ty = Type::atomic(u32::elem_type_native());
     if !client

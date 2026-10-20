@@ -1,6 +1,6 @@
 use crate::compute::device_poison::PoisonWatch;
 use crate::{
-    CompilerInfo, ParamsTransfer, WgpuResource,
+    CompilerInfo, ParamsTransfer, PrimaryMemoryMode, WgpuResource,
     stream::WgpuStream,
     timings::{TimestampQuerySetBudget, TimestampSampling},
 };
@@ -86,6 +86,7 @@ pub struct WgpuStreamFactory {
     queue: wgpu::Queue,
     memory_properties: MemoryDeviceProperties,
     memory_config: MemoryConfiguration,
+    primary_memory: PrimaryMemoryMode,
     timing_method: TimingMethod,
     /// Per-device budget of live timestamp query sets, shared by every stream it creates.
     timing_budget: Arc<TimestampQuerySetBudget>,
@@ -112,6 +113,7 @@ impl StreamFactory for WgpuStreamFactory {
             self.queue.clone(),
             self.memory_properties.clone(),
             gpu_config,
+            self.primary_memory,
             self.timing_method,
             self.timing_budget.clone(),
             self.timestamp_sampling,
@@ -132,6 +134,7 @@ impl ScheduledWgpuBackend {
         queue: wgpu::Queue,
         memory_properties: MemoryDeviceProperties,
         memory_config: MemoryConfiguration,
+        primary_memory: PrimaryMemoryMode,
         timing_method: TimingMethod,
         backend: wgpu::Backend,
         tasks_max: usize,
@@ -153,6 +156,7 @@ impl ScheduledWgpuBackend {
                 queue,
                 memory_properties,
                 memory_config,
+                primary_memory,
                 timing_method,
                 timing_budget,
                 timestamp_sampling: TimestampSampling::new(backend),

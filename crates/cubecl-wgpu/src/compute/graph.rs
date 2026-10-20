@@ -51,6 +51,10 @@ pub struct WgpuGraph {
     /// it was — tainting them is what makes a later read of one fail,
     /// whichever stream asks.
     pub(crate) written: Vec<BufferBinding>,
+    /// Every buffer the recorded launches reference, read-only inputs and
+    /// indirect-dispatch counts included. A replay cannot touch any of them
+    /// while the host has it mapped.
+    pub(crate) resources: Vec<WgpuResource>,
 }
 
 /// One recorded dispatch, resolved down to what `wgpu` needs at encode time.
@@ -94,6 +98,9 @@ pub(crate) enum ReplayDispatch {
 #[derive(Debug, Default)]
 pub(crate) struct GraphRecording {
     pub(crate) tasks: Vec<ReplayTask>,
+    /// Every buffer the recorded launches reference, for the replay-time host
+    /// lease check. Handed to the graph at `end_capture`.
+    pub(crate) resources: Vec<WgpuResource>,
     /// Cross-stream input bindings of recorded tasks (see [`WgpuGraph::_shared`]).
     pub(crate) shared: SharedMemoryBindings,
     /// Uniform slices created inside the window, held alive until

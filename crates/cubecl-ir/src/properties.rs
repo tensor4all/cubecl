@@ -120,6 +120,9 @@ pub struct MemoryDeviceProperties {
     /// Private because [`set_max_memory`](Self::set_max_memory) is its only
     /// writer, and that is where a zero becomes `None`.
     max_memory: Option<u64>,
+    /// Whether the runtime's primary pool lives in memory the host can map, so
+    /// a read of an idle buffer is zero-copy and a write into one is in place.
+    host_visible_primary: bool,
 }
 
 impl MemoryDeviceProperties {
@@ -130,6 +133,7 @@ impl MemoryDeviceProperties {
             max_page_size,
             alignment,
             max_memory: None,
+            host_visible_primary: false,
         }
     }
 
@@ -161,6 +165,20 @@ impl MemoryDeviceProperties {
             0 => None,
             size => Some(size),
         };
+    }
+
+    /// Whether the primary pool is host-visible: a read of an idle buffer is a
+    /// zero-copy mapping of the device allocation, and a write into an idle
+    /// buffer is a host copy in place. A runtime on device-local memory reports
+    /// `false`, so a consumer can require the guarantee instead of hoping for it.
+    pub const fn host_visible_primary(&self) -> bool {
+        self.host_visible_primary
+    }
+
+    /// States that the primary pool is host-visible, as
+    /// [`host_visible_primary`](Self::host_visible_primary) reads it.
+    pub const fn set_host_visible_primary(&mut self, host_visible: bool) {
+        self.host_visible_primary = host_visible;
     }
 }
 

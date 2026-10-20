@@ -458,6 +458,18 @@ pub enum ServerError {
         backtrace: BackTrace,
     },
 
+    /// A host-accessible buffer refused GPU access, or the host could not map
+    /// it. A matchable variant so a caller can tell a live host lease apart from
+    /// an unrelated execution failure.
+    #[error("Host access to a buffer was refused\nCaused by:\n  {reason}\nBacktrace:\n{backtrace}")]
+    HostAccessRefused {
+        /// The details of the refusal.
+        reason: String,
+        /// The backtrace for this error.
+        #[cfg_attr(serializable, serde(skip))]
+        backtrace: BackTrace,
+    },
+
     /// The runtime has no transport between its devices, so the collective was
     /// not run. Its own variant rather than a `Generic` reason, so a caller can
     /// tell a runtime that cannot do this apart from a collective that failed.

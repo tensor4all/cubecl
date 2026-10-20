@@ -6,9 +6,10 @@ use super::{
 };
 use crate::compute::copies::WgpuCopies;
 use crate::compute::device_poison::PoisonWatch;
+use crate::compute::storage::HostAccessError;
 use crate::{
-    WgpuResource, WgpuStorage,
-    controller::WgpuAllocController,
+    PrimaryMemoryMode, WgpuResource, WgpuStorage,
+    controller::{WgpuAllocController, WgpuMappedReadController},
     schedule::{Addresses, ScheduleTask},
 };
 use core::iter;
@@ -32,7 +33,9 @@ use cubecl_ir::MemoryDeviceProperties;
 use cubecl_server::memory_management::relocation::{
     RelocatableStream, RelocationNeed, RelocationReason,
 };
-use cubecl_server::memory_management::{Cleanup, MemoryManagement};
+use cubecl_server::memory_management::{
+    Cleanup, ManagedMemoryBinding, MemoryManagement, PageGuard,
+};
 use cubecl_server::{
     logging::ServerLogger,
     memory_management::{ErrorGraph, FailureId, ManagedMemoryHandle, SharedMemoryBindings},
@@ -45,9 +48,27 @@ use renderdoc::{RenderDoc, V100};
 use std::{future::Future, num::NonZero, pin::Pin, sync::Arc};
 use wgpu::ComputePipeline;
 
+/// The allocation lease a host-visible read holds: the binding keeps its slice
+/// alive, and the page guard keeps the rest of the page from being carved up.
+type HostReadLease = (ManagedMemoryBinding, Option<PageGuard>);
+
+/// One source of a read: the resource, its logical shape, and the lease a
+/// zero-copy host-visible read takes.
+type ReadDescriptor = (WgpuResource, Shape, usize, Option<HostReadLease>);
+
 #[cfg(renderdoc)]
 thread_local! {
     static RENDERDOC: LazyCell<Option<Mutex<RenderDoc<V100>>>> = LazyCell::new(|| RenderDoc::new().ok().map(Mutex::new));
+}
+
+/// Test-only count of host-visible writes that mapped in place.
+#[cfg(test)]
+pub(crate) static HOST_VISIBLE_WRITES_IN_PLACE: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(0);
+
+#[cfg(test)]
+fn record_host_visible_write() {
+    HOST_VISIBLE_WRITES_IN_PLACE.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 }
 
 #[derive(Debug)]
@@ -180,6 +201,7 @@ impl WgpuStream {
         queue: wgpu::Queue,
         memory_properties: MemoryDeviceProperties,
         memory_config: MemoryConfiguration,
+        primary_memory: PrimaryMemoryMode,
         timing_method: TimingMethod,
         timing_budget: Arc<TimestampQuerySetBudget>,
         timestamp_sampling: TimestampSampling,
@@ -211,6 +233,7 @@ impl WgpuStream {
             &device,
             &memory_properties,
             memory_config,
+            primary_memory,
             logger.clone(),
             use_vulkan_compiler,
         );
@@ -324,12 +347,51 @@ impl WgpuStream {
                     self.capture_error(err);
                     return;
                 }
+                // A write larger than the logical resource must never reach the
+                // physical buffer: on a shared page that would overwrite a
+                // neighbour. This check precedes both the mapped and staged paths.
+                if data.len() as u64 > buffer.size {
+                    let err = ServerError::Validation {
+                        message: format!(
+                            "write of {} bytes exceeds the {}-byte resource",
+                            data.len(),
+                            buffer.size
+                        ),
+                        backtrace: BackTrace::capture(),
+                    };
+                    self.reject_write(failures, &handle, err);
+                    return;
+                }
+
                 // It is important to flush before writing, as the write operation is inserted
                 // into the QUEUE not the encoder. We want to make sure all outstanding work
                 // happens _before_ the write operation.
                 self.submit();
-                if !self.write_mapped(&buffer, &data) {
-                    self.write_to_buffer(&buffer, &data);
+                match self.write_mapped(&buffer, &data) {
+                    Ok(true) => {}
+                    Ok(false) => {
+                        // The staged path pads to a 4-byte boundary, so it cannot
+                        // preserve an untouched tail of an unaligned partial write.
+                        // Refuse that rather than corrupting bytes the caller did
+                        // not name. Host-visible pools never take this branch.
+                        if (data.len() as u64) < buffer.size
+                            && !(data.len() as u64).is_multiple_of(wgpu::COPY_BUFFER_ALIGNMENT)
+                        {
+                            let err = ServerError::Validation {
+                                message: format!(
+                                    "unaligned partial write of {} bytes into a {}-byte resource \
+                                     cannot be staged without changing the untouched tail",
+                                    data.len(),
+                                    buffer.size
+                                ),
+                                backtrace: BackTrace::capture(),
+                            };
+                            self.reject_write(failures, &handle, err);
+                            return;
+                        }
+                        self.write_to_buffer(&buffer, &data);
+                    }
+                    Err(err) => self.reject_write(failures, &handle, err),
                 }
             }
             ScheduleTask::Execute {
@@ -368,7 +430,26 @@ impl WgpuStream {
         }
     }
 
+    /// Taint a write destination with the error that stopped the write and log
+    /// the refusal. The next read or sync of the destination names it.
+    fn reject_write(
+        &mut self,
+        failures: &mut ErrorGraph,
+        handle: &BufferBinding,
+        err: ServerError,
+    ) {
+        let failure = failures.insert(err.clone());
+        self.memory
+            .taint(&handle.memory, handle.range(), failure, failures);
+        failures.prune(failure);
+        self.capture_error(err);
+    }
+
     /// Read multiple buffers lazily to [Bytes], potentially using pinned memory.
+    ///
+    /// A descriptor naming a host-visible primary buffer is mapped zero-copy when
+    /// it carries its allocation lease; every other descriptor is copied through
+    /// the stream's staging buffers as before.
     ///
     /// # Arguments
     ///
@@ -380,19 +461,27 @@ impl WgpuStream {
     /// A [Result] containing a vector of [Bytes] with the copied data, or an [`IoError`] if any copy fails.
     pub fn read_resources(
         &mut self,
-        descriptors: Vec<(WgpuResource, Shape, usize)>,
+        descriptors: Vec<ReadDescriptor>,
         stream_id: StreamId,
     ) -> DynFut<Result<Vec<Bytes>, ServerError>> {
         self.compute_pass = None;
         let mut staging_info = Vec::with_capacity(descriptors.len());
+        let mut host_sources = Vec::with_capacity(descriptors.len());
         let mut callbacks = Vec::with_capacity(descriptors.len());
 
-        for (resource, shape, elem_size) in descriptors {
+        for (resource, shape, elem_size, lease) in descriptors {
             let size = shape.iter().product::<usize>() * elem_size;
 
-            // Zero-sized resources don't need a GPU copy.
+            // Zero-sized resources don't need a GPU copy or a mapping.
             if resource.size == 0 {
                 staging_info.push(None);
+                host_sources.push(None);
+                continue;
+            }
+
+            if let Some((binding, guard)) = lease {
+                staging_info.push(None);
+                host_sources.push(Some((resource, binding, guard, size)));
                 continue;
             }
 
@@ -411,6 +500,7 @@ impl WgpuStream {
                 aligned_len,
             );
             staging_info.push(Some((staging, binding, size)));
+            host_sources.push(None);
         }
 
         // Flush all commands to the queue, so GPU gets started on copying to the
@@ -425,6 +515,24 @@ impl WgpuStream {
         // Return the poisoning instead.
         if let Err(err) = self.poison.check() {
             return Box::pin(async move { Err(err) });
+        }
+
+        // Register the zero-copy mappings. Their callbacks wait for the work
+        // that last wrote each buffer; wgpu also flushes a pending
+        // `write_buffer` for that buffer inside `map_async`.
+        let mut host_reads = Vec::with_capacity(host_sources.len());
+        for source in host_sources {
+            match source {
+                Some((resource, binding, guard, size)) => {
+                    match resource.begin_host_read(binding, guard, &self.poison) {
+                        Ok(pending) => host_reads.push(Some((pending, size))),
+                        Err(err) => {
+                            return Box::pin(async move { Err(err.into()) });
+                        }
+                    }
+                }
+                None => host_reads.push(None),
+            }
         }
 
         for entry in staging_info.iter() {
@@ -471,9 +579,26 @@ impl WgpuStream {
                 }
             }
 
+            // The host-visible mappings wait on the same queue, and complete only
+            // after the work that last wrote each buffer has landed.
+            let mut mappings = Vec::with_capacity(host_reads.len());
+            for pending in host_reads.into_iter() {
+                if let Some((pending, size)) = pending {
+                    poison.check()?;
+                    let completed = pending.complete().await;
+                    // The device can be lost while the mapping is in flight; report
+                    // the poisoning rather than the callback that never fired.
+                    poison.check()?;
+                    mappings.push(Some((completed?, size)));
+                } else {
+                    mappings.push(None);
+                }
+            }
+
             // Can stop polling now.
             core::mem::drop(poll);
 
+            let mut mappings = mappings.into_iter();
             let result = {
                 staging_info
                     .into_iter()
@@ -483,6 +608,10 @@ impl WgpuStream {
                                 Box::new(WgpuAllocController::init(binding, staging.buffer));
                             // SAFETY: The binding has initialized memory for at least `size` bytes.
                             unsafe { Bytes::from_controller(controller, size) }
+                        } else if let Some((mapping, len)) = mappings.next().flatten() {
+                            let controller = Box::new(WgpuMappedReadController::new(mapping, len));
+                            // SAFETY: The mapping has initialized memory for all `len` bytes.
+                            unsafe { Bytes::from_controller(controller, len) }
                         } else {
                             Bytes::from_bytes_vec(vec![])
                         }
@@ -738,32 +867,37 @@ impl WgpuStream {
         resource
     }
 
-    /// Copies into a mapped buffer, skipping staging. Returns `false` to fall back to the queue.
+    /// Copies into a mapped buffer, skipping staging. Returns `Ok(false)` only
+    /// for a device-local allocation that must fall back to the queue, and the
+    /// typed refusal when a host-visible buffer is leased by a live read.
     ///
     /// Not ordered by the queue, so call it only after a submit, never for uniforms.
     #[cfg(not(target_family = "wasm"))]
-    fn write_mapped(&mut self, resource: &WgpuResource, data: &[u8]) -> bool {
+    fn write_mapped(&mut self, resource: &WgpuResource, data: &[u8]) -> Result<bool, ServerError> {
+        if resource.is_host_visible() {
+            // A leased buffer is the host's; staging would overwrite what a live
+            // read is looking at, so this is a refusal rather than a fallback.
+            if resource.is_host_leased() {
+                return Err(HostAccessError::Leased.into());
+            }
+            // Idleness is per buffer: another buffer being busy does not make
+            // this one a staging candidate. A mapping failure is an error.
+            resource.write_host_visible(data, &self.device, &self.queue, &self.poison)?;
+            #[cfg(test)]
+            record_host_visible_write();
+            return Ok(true);
+        }
+
         let Some(host_ptr) = resource.host_ptr else {
-            return false;
+            return Ok(false);
         };
         // The copy below is unchecked; the queue path validates.
         if data.len() as u64 > resource.size {
-            return false;
+            return Ok(false);
         }
 
-        // A pooled range may have belonged to a tensor whose kernels are still running, so
-        // the copy needs an idle queue. Never drain one to get it: the stall costs a
-        // pipelined loop the CPU/GPU overlap it lives on, and it buys nothing on a bulk
-        // upload, which finds the queue idle anyway because nothing is queued behind what
-        // it is loading. So take the mapping when the queue is already free, and leave the
-        // write to the queue when it is not.
-        match self.device.poll(wgpu::PollType::Poll) {
-            Ok(status) if status.wait_finished() => {}
-            Ok(_) => return false,
-            Err(e) => {
-                log::warn!("wgpu: poll before a mapped write failed ({e})");
-                return false;
-            }
+        if !self.queue_is_idle() {
+            return Ok(false);
         }
 
         // SAFETY: The range is in bounds and the queue is idle.
@@ -771,12 +905,34 @@ impl WgpuStream {
             let dst = host_ptr.0.as_ptr().add(resource.offset as usize);
             core::ptr::copy_nonoverlapping(data.as_ptr(), dst, data.len());
         }
-        true
+        Ok(true)
+    }
+
+    /// A pooled range may have belonged to a tensor whose kernels are still running, so
+    /// a mapped write needs an idle queue. Never drain one to get it: the stall costs a
+    /// pipelined loop the CPU/GPU overlap it lives on, and it buys nothing on a bulk
+    /// upload, which finds the queue idle anyway because nothing is queued behind what
+    /// it is loading. So take the mapping when the queue is already free, and leave the
+    /// write to the queue when it is not.
+    #[cfg(not(target_family = "wasm"))]
+    fn queue_is_idle(&self) -> bool {
+        match self.device.poll(wgpu::PollType::Poll) {
+            Ok(status) if status.wait_finished() => true,
+            Ok(_) => false,
+            Err(e) => {
+                log::warn!("wgpu: poll before a mapped write failed ({e})");
+                false
+            }
+        }
     }
 
     #[cfg(target_family = "wasm")]
-    fn write_mapped(&mut self, _resource: &WgpuResource, _data: &[u8]) -> bool {
-        false
+    fn write_mapped(
+        &mut self,
+        _resource: &WgpuResource,
+        _data: &[u8],
+    ) -> Result<bool, ServerError> {
+        Ok(false)
     }
 
     // Nb: this function submits a command to the _queue_ not to the encoder,
@@ -785,7 +941,7 @@ impl WgpuStream {
     // NOT be copied to.
     fn write_to_buffer(&mut self, resource: &WgpuResource, data: &[u8]) {
         // Nothing to write for zero-sized resources.
-        if resource.size == 0 {
+        if resource.size == 0 || data.is_empty() {
             return;
         }
 
@@ -795,10 +951,13 @@ impl WgpuStream {
         let copy_align = wgpu::COPY_BUFFER_ALIGNMENT;
         let size = resource.size.next_multiple_of(copy_align);
 
-        if size == data.len() as u64 {
+        if size == data.len() as u64 || (data.len() as u64).is_multiple_of(copy_align) {
             // write_buffer is the recommended way to write this data, as:
             // - On WebGPU, from WASM, this can save a copy to the JS memory.
             // - On devices with unified memory, this could skip the staging buffer entirely.
+            //
+            // It also writes exactly `data.len()` bytes, which is what keeps a
+            // partial aligned write from disturbing the rest of the resource.
             self.queue
                 .write_buffer(&resource.buffer, resource.offset, data);
         } else {
@@ -997,6 +1156,13 @@ impl WgpuStream {
             return;
         }
 
+        // Keep every referenced buffer for the replay-time host lease check,
+        // not only the write set.
+        self.recording.resources.extend(resources.iter().cloned());
+        self.recording
+            .resources
+            .extend(custom_resources.iter().cloned());
+
         let bind_group = (!resources.is_empty()).then(|| {
             let entries = resources
                 .iter()
@@ -1021,7 +1187,10 @@ impl WgpuStream {
         let dispatch = match dispatch.clone() {
             CubeCount::Static(x, y, z) => ReplayDispatch::Static(x, y, z),
             CubeCount::Dynamic(binding) => match self.resource(binding) {
-                Ok(resource) => ReplayDispatch::Dynamic(resource),
+                Ok(resource) => {
+                    self.recording.resources.push(resource.clone());
+                    ReplayDispatch::Dynamic(resource)
+                }
                 Err(err) => {
                     // The recording is now incomplete; `end_capture` sees the
                     // doomed window and rejects the capture. It taints nothing

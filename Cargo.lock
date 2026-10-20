@@ -1019,223 +1019,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cubecl"
-version = "0.11.0"
-dependencies = [
- "cubecl-core",
- "cubecl-cpu",
- "cubecl-cuda",
- "cubecl-environment",
- "cubecl-hip",
- "cubecl-ir",
- "cubecl-metal",
- "cubecl-runtime",
- "cubecl-std",
- "cubecl-wgpu",
- "half",
-]
-
-[[package]]
-name = "cubecl-common"
-version = "0.11.0"
-dependencies = [
- "bytemuck",
- "cfg_aliases",
- "criterion",
- "cubecl-environment",
- "derive-new",
- "derive_more",
- "float8",
- "half",
- "hashbrown 0.17.1",
- "log",
- "num-traits",
- "portable-atomic",
- "portable-atomic-util",
- "serde",
- "spin",
- "tempfile",
- "test-log",
- "tynm",
- "xxhash-rust",
-]
-
-[[package]]
-name = "cubecl-core"
-version = "0.11.0"
-dependencies = [
- "bitflags 2.13.1",
- "bytemuck",
- "cubecl-common",
- "cubecl-environment",
- "cubecl-ir",
- "cubecl-macros",
- "cubecl-runtime",
- "cubecl-zspace",
- "derive-new",
- "derive_more",
- "float-ord",
- "half",
- "hashbrown 0.17.1",
- "itertools 0.15.0",
- "log",
- "num-complex",
- "num-traits",
- "paste",
- "pliron",
- "serde",
- "serde_json",
- "tempfile",
- "test-log",
- "tracing",
- "trybuild",
- "variadics_please",
-]
-
-[[package]]
-name = "cubecl-cpp"
-version = "0.11.0"
-dependencies = [
- "bytemuck",
- "cubecl-common",
- "cubecl-core",
- "cubecl-environment",
- "cubecl-opt",
- "cubecl-runtime",
- "derive-new",
- "derive_more",
- "half",
- "itertools 0.15.0",
- "log",
- "num-traits",
- "paste",
- "pliron",
- "sanitize-filename",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "cubecl-cpu"
-version = "0.11.0"
-dependencies = [
- "bytemuck",
- "crossbeam-utils",
- "cubecl-common",
- "cubecl-core",
- "cubecl-environment",
- "cubecl-llvm",
- "cubecl-server",
- "cubecl-std",
- "derive-new",
- "half",
- "libc",
- "log",
- "paste",
- "pliron",
- "spin",
- "sysinfo",
- "test-log",
- "winapi",
-]
-
-[[package]]
-name = "cubecl-cuda"
-version = "0.11.0"
-dependencies = [
- "bytemuck",
- "cubecl-common",
- "cubecl-core",
- "cubecl-cpp",
- "cubecl-environment",
- "cubecl-llvm",
- "cubecl-monitoring",
- "cubecl-server",
- "cubecl-std",
- "cudarc",
- "derive-new",
- "half",
- "log",
- "paste",
- "serde",
- "test-log",
- "tracing",
-]
-
-[[package]]
-name = "cubecl-environment"
-version = "0.11.0"
-dependencies = [
- "async-channel",
- "backtrace",
- "branches",
- "bytemuck",
- "bytes",
- "cfg-if",
- "cfg_aliases",
- "ciborium",
- "criterion",
- "embassy-futures",
- "embassy-time",
- "etcetera",
- "foldhash 0.2.0",
- "futures-lite",
- "hashbrown 0.17.1",
- "js-sys",
- "log",
- "oneshot",
- "parking_lot",
- "portable-atomic",
- "portable-atomic-util",
- "rand 0.10.2",
- "serde",
- "serde_bytes",
- "serde_json",
- "serial_test",
- "spin",
- "tempfile",
- "test-log",
- "tokio",
- "toml",
- "tracing",
- "turso",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "wasm-bindgen-test",
- "web-sys",
- "web-time",
-]
-
-[[package]]
-name = "cubecl-example"
-version = "0.11.0"
-dependencies = [
- "cubecl",
-]
-
-[[package]]
-name = "cubecl-hip"
-version = "0.11.0"
-dependencies = [
- "bytemuck",
- "cubecl-common",
- "cubecl-core",
- "cubecl-cpp",
- "cubecl-environment",
- "cubecl-hip-sys",
- "cubecl-llvm",
- "cubecl-monitoring",
- "cubecl-server",
- "cubecl-std",
- "derive-new",
- "half",
- "log",
- "paste",
- "serde",
- "test-log",
- "tracing",
-]
-
-[[package]]
 name = "cubecl-hip-sys"
 version = "7.14.6085001"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1244,320 +1027,6 @@ dependencies = [
  "libc",
  "libloading 0.8.9",
  "regex",
-]
-
-[[package]]
-name = "cubecl-inspect"
-version = "0.11.0"
-dependencies = [
- "ansi-to-tui",
- "ciborium",
- "clap",
- "cubecl-common",
- "cubecl-environment",
- "cubecl-runtime",
- "cubecl-server",
- "ratatui",
- "semver",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "cubecl-ir"
-version = "0.11.0"
-dependencies = [
- "bumpalo",
- "cubecl-common",
- "cubecl-environment",
- "cubecl-macros-internal",
- "derive-new",
- "derive_more",
- "float-ord",
- "foldhash 0.2.0",
- "half",
- "hashbrown 0.17.1",
- "internment",
- "itertools 0.15.0",
- "num-complex",
- "num-integer",
- "num-traits",
- "pliron",
- "pliron-spirv",
- "portable-atomic",
- "rustc_apfloat",
- "serde",
- "smallvec",
- "spin",
- "thiserror 2.0.20",
- "variadics_please",
-]
-
-[[package]]
-name = "cubecl-llvm"
-version = "0.11.0"
-dependencies = [
- "cc",
- "cubecl-core",
- "cubecl-environment",
- "cubecl-opt",
- "cubecl-runtime",
- "derive-new",
- "half",
- "llvm-sys",
- "pliron",
- "pliron-llvm",
- "thiserror 2.0.20",
- "tracel-llvm-bundler",
-]
-
-[[package]]
-name = "cubecl-macros"
-version = "0.11.0"
-dependencies = [
- "darling 0.24.1",
- "derive-new",
- "derive_more",
- "ident_case",
- "inflections",
- "itertools 0.15.0",
- "prettyplease 0.3.0",
- "proc-macro2",
- "quote",
- "syn 3.0.4",
-]
-
-[[package]]
-name = "cubecl-macros-internal"
-version = "0.11.0"
-dependencies = [
- "darling 0.24.1",
- "inflections",
- "proc-macro2",
- "quote",
- "syn 3.0.4",
-]
-
-[[package]]
-name = "cubecl-metal"
-version = "0.11.0"
-dependencies = [
- "block2",
- "bytemuck",
- "cubecl-common",
- "cubecl-core",
- "cubecl-cpp",
- "cubecl-environment",
- "cubecl-ir",
- "cubecl-monitoring",
- "cubecl-server",
- "cubecl-std",
- "derive-new",
- "half",
- "hashbrown 0.17.1",
- "log",
- "objc2",
- "objc2-foundation",
- "objc2-metal",
- "paste",
- "serde",
- "test-log",
-]
-
-[[package]]
-name = "cubecl-monitoring"
-version = "0.11.0"
-dependencies = [
- "cfg_aliases",
- "cubecl-ir",
- "nvml-wrapper",
- "objc2-core-foundation",
- "objc2-io-kit",
- "tempfile",
- "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "cubecl-opt"
-version = "0.11.0"
-dependencies = [
- "cubecl-common",
- "cubecl-core",
- "cubecl-environment",
- "cubecl-ir",
- "derive-new",
- "derive_more",
- "downcast-rs",
- "env_logger",
- "expect-test",
- "foldhash 0.2.0",
- "hashbrown 0.17.1",
- "hi_sparse_bitset",
- "itertools 0.15.0",
- "log",
- "pliron",
- "smallvec",
- "test-log",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "cubecl-runtime"
-version = "0.11.0"
-dependencies = [
- "buildid",
- "bytemuck",
- "cfg-if",
- "cfg_aliases",
- "cubecl-common",
- "cubecl-environment",
- "cubecl-ir",
- "cubecl-monitoring",
- "cubecl-zspace",
- "derive-new",
- "derive_more",
- "foldhash 0.2.0",
- "futures-util",
- "hashbrown 0.17.1",
- "itertools 0.15.0",
- "log",
- "pliron",
- "rand 0.10.2",
- "serde",
- "serde_json",
- "serial_test",
- "smallvec",
- "tempfile",
- "test-log",
- "thiserror 2.0.20",
- "toml",
- "tracing",
- "tracy-client",
- "wasm-bindgen-futures",
-]
-
-[[package]]
-name = "cubecl-server"
-version = "0.11.0"
-dependencies = [
- "buildid",
- "bytemuck",
- "cfg-if",
- "cfg_aliases",
- "cubecl-common",
- "cubecl-environment",
- "cubecl-ir",
- "cubecl-runtime",
- "cubecl-zspace",
- "derive-new",
- "derive_more",
- "foldhash 0.2.0",
- "futures-util",
- "hashbrown 0.17.1",
- "itertools 0.15.0",
- "log",
- "pliron",
- "rand 0.10.2",
- "serde",
- "serde_json",
- "serial_test",
- "smallvec",
- "tempfile",
- "test-log",
- "thiserror 2.0.20",
- "tracing",
- "tracy-client",
-]
-
-[[package]]
-name = "cubecl-spirv"
-version = "0.11.0"
-dependencies = [
- "bitflags 2.13.1",
- "cubecl-common",
- "cubecl-core",
- "cubecl-environment",
- "cubecl-ir",
- "cubecl-opt",
- "cubecl-runtime",
- "half",
- "hashbrown 0.17.1",
- "itertools 0.15.0",
- "paste",
- "pliron",
- "pliron-spirv",
- "sanitize-filename",
- "serde",
- "tracel-rspirv",
-]
-
-[[package]]
-name = "cubecl-std"
-version = "0.11.0"
-dependencies = [
- "cubecl-common",
- "cubecl-core",
- "cubecl-environment",
- "cubecl-runtime",
- "half",
- "num-traits",
- "paste",
- "serde",
- "spin",
- "test-log",
- "variadics_please",
-]
-
-[[package]]
-name = "cubecl-wgpu"
-version = "0.11.0"
-dependencies = [
- "ash",
- "bytemuck",
- "cfg-if",
- "cfg_aliases",
- "cubecl-common",
- "cubecl-core",
- "cubecl-cpp",
- "cubecl-environment",
- "cubecl-ir",
- "cubecl-monitoring",
- "cubecl-opt",
- "cubecl-server",
- "cubecl-spirv",
- "cubecl-std",
- "derive-new",
- "derive_more",
- "half",
- "hashbrown 0.17.1",
- "itertools 0.15.0",
- "log",
- "objc2",
- "objc2-foundation",
- "objc2-metal",
- "paste",
- "pliron",
- "renderdoc",
- "sanitize-filename",
- "test-log",
- "thiserror 2.0.20",
- "tracel-ash",
- "tracing",
- "tracy-client",
- "wasm-bindgen-futures",
- "wgpu",
- "wgpu-hal",
-]
-
-[[package]]
-name = "cubecl-zspace"
-version = "0.11.0"
-dependencies = [
- "derive-new",
- "serde",
- "smallvec",
 ]
 
 [[package]]
@@ -1711,18 +1180,18 @@ dependencies = [
 
 [[package]]
 name = "device_identity"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
- "cubecl",
+ "t4a-cubecl",
 ]
 
 [[package]]
 name = "device_sharing"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
- "cubecl",
  "half",
  "sum_things",
+ "t4a-cubecl",
  "wgpu",
 ]
 
@@ -1956,9 +1425,9 @@ dependencies = [
 
 [[package]]
 name = "execution"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
- "cubecl",
+ "t4a-cubecl",
 ]
 
 [[package]]
@@ -2080,10 +1549,10 @@ checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
 
 [[package]]
 name = "fusing"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
- "cubecl",
  "half",
+ "t4a-cubecl",
 ]
 
 [[package]]
@@ -2173,10 +1642,10 @@ dependencies = [
 
 [[package]]
 name = "gelu"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
- "cubecl",
  "half",
+ "t4a-cubecl",
 ]
 
 [[package]]
@@ -3347,10 +2816,10 @@ dependencies = [
 
 [[package]]
 name = "normalization"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
- "cubecl",
  "half",
+ "t4a-cubecl",
 ]
 
 [[package]]
@@ -4974,10 +4443,10 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "sum_things"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
- "cubecl",
  "half",
+ "t4a-cubecl",
 ]
 
 [[package]]
@@ -5055,6 +4524,537 @@ dependencies = [
 ]
 
 [[package]]
+name = "t4a-cubecl"
+version = "0.12.0"
+dependencies = [
+ "half",
+ "t4a-cubecl-core",
+ "t4a-cubecl-cpu",
+ "t4a-cubecl-cuda",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-hip",
+ "t4a-cubecl-ir",
+ "t4a-cubecl-metal",
+ "t4a-cubecl-runtime",
+ "t4a-cubecl-std",
+ "t4a-cubecl-wgpu",
+]
+
+[[package]]
+name = "t4a-cubecl-common"
+version = "0.12.0"
+dependencies = [
+ "bytemuck",
+ "cfg_aliases",
+ "criterion",
+ "derive-new",
+ "derive_more",
+ "float8",
+ "half",
+ "hashbrown 0.17.1",
+ "log",
+ "num-traits",
+ "portable-atomic",
+ "portable-atomic-util",
+ "serde",
+ "spin",
+ "t4a-cubecl-environment",
+ "tempfile",
+ "test-log",
+ "tynm",
+ "xxhash-rust",
+]
+
+[[package]]
+name = "t4a-cubecl-core"
+version = "0.12.0"
+dependencies = [
+ "bitflags 2.13.1",
+ "bytemuck",
+ "derive-new",
+ "derive_more",
+ "float-ord",
+ "half",
+ "hashbrown 0.17.1",
+ "itertools 0.15.0",
+ "log",
+ "num-complex",
+ "num-traits",
+ "paste",
+ "pliron",
+ "serde",
+ "serde_json",
+ "t4a-cubecl-common",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-ir",
+ "t4a-cubecl-macros",
+ "t4a-cubecl-runtime",
+ "t4a-cubecl-zspace",
+ "tempfile",
+ "test-log",
+ "tracing",
+ "trybuild",
+ "variadics_please",
+]
+
+[[package]]
+name = "t4a-cubecl-cpp"
+version = "0.12.0"
+dependencies = [
+ "bytemuck",
+ "derive-new",
+ "derive_more",
+ "half",
+ "itertools 0.15.0",
+ "log",
+ "num-traits",
+ "paste",
+ "pliron",
+ "sanitize-filename",
+ "t4a-cubecl-common",
+ "t4a-cubecl-core",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-opt",
+ "t4a-cubecl-runtime",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "t4a-cubecl-cpu"
+version = "0.12.0"
+dependencies = [
+ "bytemuck",
+ "crossbeam-utils",
+ "derive-new",
+ "half",
+ "libc",
+ "log",
+ "paste",
+ "pliron",
+ "spin",
+ "sysinfo",
+ "t4a-cubecl-common",
+ "t4a-cubecl-core",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-llvm",
+ "t4a-cubecl-server",
+ "t4a-cubecl-std",
+ "test-log",
+ "winapi",
+]
+
+[[package]]
+name = "t4a-cubecl-cuda"
+version = "0.12.0"
+dependencies = [
+ "bytemuck",
+ "cudarc",
+ "derive-new",
+ "half",
+ "log",
+ "paste",
+ "serde",
+ "t4a-cubecl-common",
+ "t4a-cubecl-core",
+ "t4a-cubecl-cpp",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-llvm",
+ "t4a-cubecl-monitoring",
+ "t4a-cubecl-server",
+ "t4a-cubecl-std",
+ "test-log",
+ "tracing",
+]
+
+[[package]]
+name = "t4a-cubecl-environment"
+version = "0.12.0"
+dependencies = [
+ "async-channel",
+ "backtrace",
+ "branches",
+ "bytemuck",
+ "bytes",
+ "cfg-if",
+ "cfg_aliases",
+ "ciborium",
+ "criterion",
+ "embassy-futures",
+ "embassy-time",
+ "etcetera",
+ "foldhash 0.2.0",
+ "futures-lite",
+ "hashbrown 0.17.1",
+ "js-sys",
+ "log",
+ "oneshot",
+ "parking_lot",
+ "portable-atomic",
+ "portable-atomic-util",
+ "rand 0.10.2",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "serial_test",
+ "spin",
+ "tempfile",
+ "test-log",
+ "tokio",
+ "toml",
+ "tracing",
+ "turso",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-bindgen-test",
+ "web-sys",
+ "web-time",
+]
+
+[[package]]
+name = "t4a-cubecl-example"
+version = "0.12.0"
+dependencies = [
+ "t4a-cubecl",
+]
+
+[[package]]
+name = "t4a-cubecl-hip"
+version = "0.12.0"
+dependencies = [
+ "bytemuck",
+ "cubecl-hip-sys",
+ "derive-new",
+ "half",
+ "log",
+ "paste",
+ "serde",
+ "t4a-cubecl-common",
+ "t4a-cubecl-core",
+ "t4a-cubecl-cpp",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-llvm",
+ "t4a-cubecl-monitoring",
+ "t4a-cubecl-server",
+ "t4a-cubecl-std",
+ "test-log",
+ "tracing",
+]
+
+[[package]]
+name = "t4a-cubecl-inspect"
+version = "0.12.0"
+dependencies = [
+ "ansi-to-tui",
+ "ciborium",
+ "clap",
+ "ratatui",
+ "semver",
+ "serde",
+ "serde_json",
+ "t4a-cubecl-common",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-runtime",
+ "t4a-cubecl-server",
+ "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "t4a-cubecl-ir"
+version = "0.12.0"
+dependencies = [
+ "bumpalo",
+ "derive-new",
+ "derive_more",
+ "float-ord",
+ "foldhash 0.2.0",
+ "half",
+ "hashbrown 0.17.1",
+ "internment",
+ "itertools 0.15.0",
+ "num-complex",
+ "num-integer",
+ "num-traits",
+ "pliron",
+ "pliron-spirv",
+ "portable-atomic",
+ "rustc_apfloat",
+ "serde",
+ "smallvec",
+ "spin",
+ "t4a-cubecl-common",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-macros-internal",
+ "thiserror 2.0.20",
+ "variadics_please",
+]
+
+[[package]]
+name = "t4a-cubecl-llvm"
+version = "0.12.0"
+dependencies = [
+ "cc",
+ "derive-new",
+ "half",
+ "llvm-sys",
+ "pliron",
+ "pliron-llvm",
+ "t4a-cubecl-core",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-opt",
+ "t4a-cubecl-runtime",
+ "thiserror 2.0.20",
+ "tracel-llvm-bundler",
+]
+
+[[package]]
+name = "t4a-cubecl-macros"
+version = "0.12.0"
+dependencies = [
+ "darling 0.24.1",
+ "derive-new",
+ "derive_more",
+ "ident_case",
+ "inflections",
+ "itertools 0.15.0",
+ "prettyplease 0.3.0",
+ "proc-macro2",
+ "quote",
+ "syn 3.0.4",
+]
+
+[[package]]
+name = "t4a-cubecl-macros-internal"
+version = "0.12.0"
+dependencies = [
+ "darling 0.24.1",
+ "inflections",
+ "proc-macro2",
+ "quote",
+ "syn 3.0.4",
+]
+
+[[package]]
+name = "t4a-cubecl-metal"
+version = "0.12.0"
+dependencies = [
+ "block2",
+ "bytemuck",
+ "derive-new",
+ "half",
+ "hashbrown 0.17.1",
+ "log",
+ "objc2",
+ "objc2-foundation",
+ "objc2-metal",
+ "paste",
+ "serde",
+ "t4a-cubecl-common",
+ "t4a-cubecl-core",
+ "t4a-cubecl-cpp",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-ir",
+ "t4a-cubecl-monitoring",
+ "t4a-cubecl-server",
+ "t4a-cubecl-std",
+ "test-log",
+]
+
+[[package]]
+name = "t4a-cubecl-monitoring"
+version = "0.12.0"
+dependencies = [
+ "cfg_aliases",
+ "nvml-wrapper",
+ "objc2-core-foundation",
+ "objc2-io-kit",
+ "t4a-cubecl-ir",
+ "tempfile",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "t4a-cubecl-opt"
+version = "0.12.0"
+dependencies = [
+ "derive-new",
+ "derive_more",
+ "downcast-rs",
+ "env_logger",
+ "expect-test",
+ "foldhash 0.2.0",
+ "hashbrown 0.17.1",
+ "hi_sparse_bitset",
+ "itertools 0.15.0",
+ "log",
+ "pliron",
+ "smallvec",
+ "t4a-cubecl-common",
+ "t4a-cubecl-core",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-ir",
+ "test-log",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "t4a-cubecl-runtime"
+version = "0.12.0"
+dependencies = [
+ "buildid",
+ "bytemuck",
+ "cfg-if",
+ "cfg_aliases",
+ "derive-new",
+ "derive_more",
+ "foldhash 0.2.0",
+ "futures-util",
+ "hashbrown 0.17.1",
+ "itertools 0.15.0",
+ "log",
+ "pliron",
+ "rand 0.10.2",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "smallvec",
+ "t4a-cubecl-common",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-ir",
+ "t4a-cubecl-monitoring",
+ "t4a-cubecl-zspace",
+ "tempfile",
+ "test-log",
+ "thiserror 2.0.20",
+ "toml",
+ "tracing",
+ "tracy-client",
+ "wasm-bindgen-futures",
+]
+
+[[package]]
+name = "t4a-cubecl-server"
+version = "0.12.0"
+dependencies = [
+ "buildid",
+ "bytemuck",
+ "cfg-if",
+ "cfg_aliases",
+ "derive-new",
+ "derive_more",
+ "foldhash 0.2.0",
+ "futures-util",
+ "hashbrown 0.17.1",
+ "itertools 0.15.0",
+ "log",
+ "pliron",
+ "rand 0.10.2",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "smallvec",
+ "t4a-cubecl-common",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-ir",
+ "t4a-cubecl-runtime",
+ "t4a-cubecl-zspace",
+ "tempfile",
+ "test-log",
+ "thiserror 2.0.20",
+ "tracing",
+ "tracy-client",
+]
+
+[[package]]
+name = "t4a-cubecl-spirv"
+version = "0.12.0"
+dependencies = [
+ "bitflags 2.13.1",
+ "half",
+ "hashbrown 0.17.1",
+ "itertools 0.15.0",
+ "paste",
+ "pliron",
+ "pliron-spirv",
+ "sanitize-filename",
+ "serde",
+ "t4a-cubecl-common",
+ "t4a-cubecl-core",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-ir",
+ "t4a-cubecl-opt",
+ "t4a-cubecl-runtime",
+ "tracel-rspirv",
+]
+
+[[package]]
+name = "t4a-cubecl-std"
+version = "0.12.0"
+dependencies = [
+ "half",
+ "num-traits",
+ "paste",
+ "serde",
+ "spin",
+ "t4a-cubecl-common",
+ "t4a-cubecl-core",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-runtime",
+ "test-log",
+ "variadics_please",
+]
+
+[[package]]
+name = "t4a-cubecl-wgpu"
+version = "0.12.0"
+dependencies = [
+ "ash",
+ "bytemuck",
+ "cfg-if",
+ "cfg_aliases",
+ "derive-new",
+ "derive_more",
+ "half",
+ "hashbrown 0.17.1",
+ "itertools 0.15.0",
+ "log",
+ "objc2",
+ "objc2-foundation",
+ "objc2-metal",
+ "paste",
+ "pliron",
+ "renderdoc",
+ "sanitize-filename",
+ "t4a-cubecl-common",
+ "t4a-cubecl-core",
+ "t4a-cubecl-cpp",
+ "t4a-cubecl-environment",
+ "t4a-cubecl-ir",
+ "t4a-cubecl-monitoring",
+ "t4a-cubecl-opt",
+ "t4a-cubecl-server",
+ "t4a-cubecl-spirv",
+ "t4a-cubecl-std",
+ "test-log",
+ "thiserror 2.0.20",
+ "tracel-ash",
+ "tracing",
+ "tracy-client",
+ "wasm-bindgen-futures",
+ "wgpu",
+ "wgpu-hal",
+]
+
+[[package]]
+name = "t4a-cubecl-zspace"
+version = "0.12.0"
+dependencies = [
+ "derive-new",
+ "serde",
+ "smallvec",
+]
+
+[[package]]
 name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5084,7 +5084,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix 1.1.4",
  "windows-sys 0.61.2",
@@ -5182,10 +5182,10 @@ dependencies = [
 
 [[package]]
 name = "throughput"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
- "cubecl",
  "half",
+ "t4a-cubecl",
 ]
 
 [[package]]
@@ -5606,13 +5606,13 @@ dependencies = [
 
 [[package]]
 name = "tracing_example"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "clap",
- "cubecl",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
+ "t4a-cubecl",
  "tokio",
  "tracing",
  "tracing-opentelemetry",

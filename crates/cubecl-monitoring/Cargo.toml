@@ -2,7 +2,7 @@
 categories = ["science", "mathematics", "algorithms"]
 description = "How busy a CubeCL device is, by the counter its card's driver or its platform keeps."
 keywords = ["gpu", "monitoring"]
-name = "cubecl-monitoring"
+name = "t4a-cubecl-monitoring"
 
 edition.workspace = true
 license.workspace = true

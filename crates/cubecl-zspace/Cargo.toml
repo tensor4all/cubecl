@@ -8,7 +8,7 @@ authors = [
 categories = ["science", "mathematics", "algorithms"]
 description = "CubeCL ZSpace Library."
 keywords = []
-name = "cubecl-zspace"
+name = "t4a-cubecl-zspace"
 
 edition.workspace = true
 license.workspace = true

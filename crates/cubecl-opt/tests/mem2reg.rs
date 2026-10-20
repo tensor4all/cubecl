@@ -1,5 +1,4 @@
 use cubecl_ir::prelude::*;
-use cubecl_opt::passes::mem2reg::Mem2RegPass;
 use expect_test::expect;
 use pliron::{
     init_env_logger_for_tests,
@@ -9,6 +8,7 @@ use pliron::{
     pass::{AnalysisManager, Pass},
     result::ExpectOk,
 };
+use t4a_cubecl_opt::passes::mem2reg::Mem2RegPass;
 
 fn run_mem2reg_on_text(ctx: &mut Context, input: &str) -> Result<String> {
     init_env_logger_for_tests!();

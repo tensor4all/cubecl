@@ -10,7 +10,7 @@
 //! ```no_run
 //! # #[cfg(feature = "wgpu")]
 //! # fn main() {
-//! let client = cubecl::Device::default().client();
+//! let client = t4a_cubecl::Device::default().client();
 //! # }
 //! # #[cfg(not(feature = "wgpu"))]
 //! # fn main() {}
@@ -31,18 +31,18 @@ pub use cubecl_runtime::memory_management::MemoryAllocationMode;
 /// [`environment::load`] mounts the file in place, or [`import`] copies it
 /// into the local environment, after which the file can be deleted.
 ///
-/// The exporting binary must be built against the same cubecl version as the
+/// The exporting binary must be built against the same `t4a-cubecl` version as the
 /// consuming one. The version is part of every cache namespace, so a bundle
 /// built elsewhere installs cleanly and is then ignored, with a warning as the
 /// only signal. Calling this from your own crate is what keeps the two in
 /// step.
 ///
 /// ```no_run
-/// use cubecl::bundle::BundleFormat;
+/// use t4a_cubecl::bundle::BundleFormat;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// // ... run the work you want tuned and compiled, then:
-/// let manifest = cubecl::environment::bundle().save("h100.bundle", BundleFormat::Sqlite)?;
+/// let manifest = t4a_cubecl::environment::bundle().save("h100.bundle", BundleFormat::Sqlite)?;
 /// println!("exported {}", manifest.name);
 /// # Ok(())
 /// # }
@@ -76,7 +76,7 @@ pub use cubecl_runtime::launched;
 ///
 /// Re-exported because a caller attributing kernels to its own work reaches for
 /// [`LaunchObservation`](cubecl_runtime::logging::LaunchObservation) and has no
-/// other reason to depend on `cubecl-runtime` directly.
+/// other reason to depend on `t4a-cubecl-runtime` directly.
 pub use cubecl_runtime::logging;
 
 /// A device of any runtime, and the runtime it belongs to.
@@ -129,7 +129,7 @@ pub type TestRuntime = metal::MetalRuntime;
 /// The client of [`test_device`], for the test that only wants one.
 ///
 /// ```no_run
-/// let client = cubecl::test_client();
+/// let client = t4a_cubecl::test_client();
 /// ```
 #[cfg(any(
     test_runtime_default,
@@ -149,7 +149,7 @@ pub fn test_client() -> client::Client {
 /// which is what keeps it from naming a runtime to get one.
 ///
 /// ```no_run
-/// let client = cubecl::test_device().client();
+/// let client = t4a_cubecl::test_device().client();
 /// ```
 #[cfg(any(test_runtime_default, test_runtime_wgpu))]
 pub fn test_device() -> Device {

@@ -7,9 +7,9 @@
 //! --target wasm32-unknown-unknown --test browser`, with
 //! `wasm-bindgen-test-runner` as the target's runner and `CHROMEDRIVER` set.
 
-use cubecl_environment::bytes::Bytes;
-use cubecl_environment::environment;
-use cubecl_environment::persistence::{CacheOption, Namespace, Store, StoreOptions};
+use t4a_cubecl_environment::bytes::Bytes;
+use t4a_cubecl_environment::environment;
+use t4a_cubecl_environment::persistence::{CacheOption, Namespace, Store, StoreOptions};
 use wasm_bindgen_test::*;
 
 wasm_bindgen_test_configure!(run_in_dedicated_worker);
@@ -33,8 +33,8 @@ async fn open() {
 /// own memory.
 fn assert_durable<K, V>(store: &Store<K, V>)
 where
-    K: cubecl_environment::persistence::StoreKey,
-    V: cubecl_environment::persistence::StoreValue,
+    K: t4a_cubecl_environment::persistence::StoreKey,
+    V: t4a_cubecl_environment::persistence::StoreValue,
 {
     let description = store.to_string();
     assert!(

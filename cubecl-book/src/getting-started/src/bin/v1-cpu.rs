@@ -1,5 +1,5 @@
 // ANCHOR: implementation
-use cubecl_example::cpu_tensor::CpuTensor; // Change to the path of your own module containing the CpuTensor
+use t4a_cubecl_example::cpu_tensor::CpuTensor; // Change to the path of your own module containing the CpuTensor
 
 /// This function execute the reduction in the following way by reducing the last dimension with a sum over each row a 2D matrix
 /// [0 1 2]    [0 + 1 + 2]    [3 ]

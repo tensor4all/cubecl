@@ -20,10 +20,6 @@ use cubecl_ir::{
     settings::{Dim3, ExecutionMode, KernelSettings},
     types::{PointerType, scalar::IndexType},
 };
-use cubecl_opt::{
-    BufferVisibility, analyses::pointer_source::GlobalVisibility,
-    passes::annotate_buffer_visibility::AnnotateGlobalVisibilityPass,
-};
 use pliron::{
     builtin::ops::FuncOp,
     context::{Context, Ptr},
@@ -31,6 +27,10 @@ use pliron::{
     operation::Operation,
     pass::{AnalysisManager, Pass},
     value::Value,
+};
+use t4a_cubecl_opt::{
+    BufferVisibility, analyses::pointer_source::GlobalVisibility,
+    passes::annotate_buffer_visibility::AnnotateGlobalVisibilityPass,
 };
 
 fn kernel() -> Scope {

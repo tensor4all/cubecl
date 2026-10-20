@@ -39,7 +39,7 @@ impl ProcessMode {
 ///
 /// ```no_run
 /// # fn warm_up() {}
-/// use cubecl_runtime::execution::{ProcessModeOverride, ProcessMode, StatisticsCollector};
+/// use t4a_cubecl_runtime::execution::{ProcessModeOverride, ProcessMode, StatisticsCollector};
 ///
 /// let collector = StatisticsCollector::new();
 ///

@@ -2,9 +2,9 @@
 
 use cubecl_core::prelude::*;
 use cubecl_core::runtime_tests::arithmetic_chains as chains;
-use cubecl_cpu::CpuRuntime;
 use cubecl_server::config::compilation::F16Evaluation;
 use half::f16;
+use t4a_cubecl_cpu::CpuRuntime;
 
 mod common;
 

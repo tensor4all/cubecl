@@ -1,7 +1,7 @@
 //! A device of any runtime, and the runtime it belongs to.
 //!
 //! Each runtime keeps its own device type — a value, nothing more, and
-//! `cubecl-runtime` owns them all. This module puts one enum over them, so a
+//! `t4a-cubecl-runtime` owns them all. This module puts one enum over them, so a
 //! caller names a device without naming a runtime, and turns that device into
 //! a [`Client`](crate::client::Client). Every variant is there whether or not the
 //! build links the runtime, which is what keeps a stored id meaning the same
@@ -34,7 +34,7 @@ pub use cubecl_runtime::runtime::{
 /// ```no_run
 /// # #[cfg(feature = "wgpu")]
 /// # fn main() {
-/// use cubecl::Device;
+/// use t4a_cubecl::Device;
 ///
 /// let client = Device::default().client();
 /// println!("running on {}", client.name());
@@ -147,7 +147,7 @@ impl RuntimeId {
 /// the other a machine to ask something else of.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DeviceUnavailable {
-    /// The build does not link this runtime. Turn on its `cubecl` feature.
+    /// The build does not link this runtime. Turn on its `t4a-cubecl` feature.
     NotLinked(RuntimeId),
     /// The runtime is linked, and this machine has none of the device asked
     /// for — only `available` of that kind.
@@ -185,7 +185,7 @@ impl core::error::Error for DeviceUnavailable {}
 /// [`DeviceUnavailable::NotLinked`], not a function that went missing.
 ///
 /// ```no_run
-/// use cubecl::Device;
+/// use t4a_cubecl::Device;
 ///
 /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
 /// // The second GPU if there is one, otherwise whatever this machine has.
@@ -241,7 +241,7 @@ impl Device {
     /// devices, each with an id and a client of its own.
     ///
     /// ```no_run
-    /// use cubecl::{Device, device::WgpuDeviceKind};
+    /// use t4a_cubecl::{Device, device::WgpuDeviceKind};
     ///
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// let client = Device::vulkan(WgpuDeviceKind::default())?.client();
@@ -461,7 +461,7 @@ impl Device {
     /// [`UtilizationUnavailable::NoPreviousReading`].
     ///
     /// ```no_run
-    /// use cubecl::Device;
+    /// use t4a_cubecl::Device;
     ///
     /// match Device::default().utilization() {
     ///     Ok(utilization) => println!("{}% busy", utilization.busy_percent),
@@ -493,7 +493,7 @@ impl Device {
     /// that don't report temperature.
     ///
     /// ```no_run
-    /// use cubecl::Device;
+    /// use t4a_cubecl::Device;
     ///
     /// if let Ok(temperature) = Device::default().temperature() {
     ///     println!("{} °C", temperature.celsius);
@@ -522,7 +522,7 @@ impl Device {
     /// that don't report their power usage.
     ///
     /// ```no_run
-    /// use cubecl::Device;
+    /// use t4a_cubecl::Device;
     ///
     /// if let Ok(power) = Device::default().power() {
     ///     println!("{} W", power.watts);
@@ -553,7 +553,7 @@ impl Device {
     /// link the runtime.
     ///
     /// ```no_run
-    /// use cubecl::Device;
+    /// use t4a_cubecl::Device;
     ///
     /// for device in Device::enumerate_all() {
     ///     if let Some(description) = device.description() {

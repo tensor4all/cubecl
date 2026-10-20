@@ -8,7 +8,7 @@ use cubecl_core::prelude::*;
 use cubecl_server::config::{CubeClRuntimeConfig, RuntimeConfig, profiling::ProfilingLogLevel};
 use cubecl_server::execution::{ProcessMode, ProcessModeOverride, StatisticsCollector};
 use cubecl_server::runtime::Runtime;
-use cubecl_wgpu::WgpuRuntime;
+use t4a_cubecl_wgpu::WgpuRuntime;
 
 #[cube(launch)]
 fn fill(out: &mut [u32]) {

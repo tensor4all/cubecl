@@ -1,6 +1,6 @@
 // ANCHOR: implementation
 use cubecl::{Device, prelude::*};
-use cubecl_example::gpu_tensor::GpuTensor; // Change to the path of your own module containing the GpuTensor
+use t4a_cubecl_example::gpu_tensor::GpuTensor; // Change to the path of your own module containing the GpuTensor
 
 #[cube(launch_unchecked)]
 fn reduce_matrix<F: Float>(input: &Tensor<F>, output: &mut Tensor<F>) {

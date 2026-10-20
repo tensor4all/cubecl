@@ -1,17 +1,17 @@
 use super::{DummyServer, Marker};
 use cubecl_common::device::{Device, DeviceService};
 use cubecl_ir::MemoryDeviceProperties;
-use cubecl_server::server::Server;
-use cubecl_server::{
+use cubecl_zspace::Shape;
+use cubecl_zspace::Strides;
+use std::sync::Arc;
+use t4a_cubecl_server::server::Server;
+use t4a_cubecl_server::{
     client::Client,
     logging::ServerLogger,
     memory_management::{MemoryConfiguration, MemoryManagement, MemoryManagementOptions},
     runtime::Runtime,
     storage::BytesStorage,
 };
-use cubecl_zspace::Shape;
-use cubecl_zspace::Strides;
-use std::sync::Arc;
 
 /// The dummy device.
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Default)]

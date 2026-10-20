@@ -13,8 +13,8 @@
 
 use cubecl_core as cubecl;
 use cubecl_core::prelude::*;
-use cubecl_hip::HipRuntime;
 use cubecl_server::runtime::Runtime;
+use t4a_cubecl_hip::HipRuntime;
 
 /// Writes a gigabyte past the end of its buffer: no bounds check, so the
 /// access reaches unmapped memory and the device raises an illegal address.

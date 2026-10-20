@@ -14,7 +14,7 @@
 /// # Example
 ///
 /// ```rust
-/// use cubecl_common::obfuscate;
+/// use t4a_cubecl_common::obfuscate;
 ///
 /// #[derive(Clone, Debug, PartialEq)]
 /// struct Tensor { shape: Vec<usize>, data: Vec<f32> }

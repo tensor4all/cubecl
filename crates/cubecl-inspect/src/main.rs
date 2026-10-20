@@ -1,11 +1,11 @@
 //! `cubecl-inspect`: read a cubecl environment file back.
 
 use clap::{Parser, Subcommand};
-use cubecl_inspect::command::{self, Inspection, Output};
-use cubecl_inspect::tui::{self, Browsing};
-use cubecl_inspect::{EnvironmentDirectory, EnvironmentName, InspectError, Inspector};
 use std::path::PathBuf;
 use std::process::ExitCode;
+use t4a_cubecl_inspect::command::{self, Inspection, Output};
+use t4a_cubecl_inspect::tui::{self, Browsing};
+use t4a_cubecl_inspect::{EnvironmentDirectory, EnvironmentName, InspectError, Inspector};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -88,7 +88,7 @@ fn run(cli: Cli) -> Result<(), String> {
                 extension: extension.unwrap_or(runtime.extension),
             };
             cli.output
-                .print(&cubecl_inspect::list(&[directory]))
+                .print(&t4a_cubecl_inspect::list(&[directory]))
                 .map_err(|err| err.to_string())
         }
         Command::Tui => tui::run(Browsing {

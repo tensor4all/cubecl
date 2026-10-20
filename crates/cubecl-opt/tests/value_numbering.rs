@@ -4,17 +4,17 @@ use cubecl_ir::{
     interfaces::side_effects::{MemoryEffect, MemoryEffectsOp},
     prelude::*,
 };
-use cubecl_opt::analyses::dataflow_solver::{
-    DataflowSolver, SolverConfig,
-    dead_code::DeadCodeAnalysis,
-    sccp::SparseConstantPropagationAnalysis,
-    value_numbering::{ValueClassAnalysis, ValueNumberLattice, ValueNumberingAnalysis},
-};
 use expect_test::expect;
 use itertools::Itertools;
 use pliron::{
     common_traits::Named, init_env_logger_for_tests, irfmt::parsers::spaced,
     operation::verify_operation, parsable::parse_from_str, printable::Printable, result::ExpectOk,
+};
+use t4a_cubecl_opt::analyses::dataflow_solver::{
+    DataflowSolver, SolverConfig,
+    dead_code::DeadCodeAnalysis,
+    sccp::SparseConstantPropagationAnalysis,
+    value_numbering::{ValueClassAnalysis, ValueNumberLattice, ValueNumberingAnalysis},
 };
 
 #[pliron_op(

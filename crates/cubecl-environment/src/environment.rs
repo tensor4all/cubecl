@@ -14,7 +14,7 @@
 //! throwaway environment for an experiment:
 //!
 //! ```ignore
-//! cubecl_environment::environment::activate("h100");
+//! t4a_cubecl_environment::environment::activate("h100");
 //! ```
 //!
 //! Switching is dynamic: every store bound to the environment detects the
@@ -295,7 +295,7 @@ pub async fn open() {
 /// whenever the options name a storage.
 ///
 /// ```ignore
-/// let store: Store<Key, Value> = cubecl_environment::environment::store(
+/// let store: Store<Key, Value> = t4a_cubecl_environment::environment::store(
 ///     StoreOptions::new()
 ///         .storage(Namespace::new("cuda/ptx"))
 ///         .cache(CacheOption::Lazy),

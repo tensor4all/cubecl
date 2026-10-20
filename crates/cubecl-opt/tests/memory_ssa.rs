@@ -3,11 +3,13 @@ use cubecl_ir::{
     interfaces::side_effects::{MemoryEffect, MemoryEffectsOp},
     prelude::*,
 };
-use cubecl_opt::analyses::{alias_analysis::address_space::AddressSpaceAA, memory_ssa::memory_ssa};
 use expect_test::expect;
 use pliron::{
     graph::dominance::DomInfo, init_env_logger_for_tests, irfmt::parsers::spaced,
     operation::verify_operation, parsable::parse_from_str, printable::Printable, result::ExpectOk,
+};
+use t4a_cubecl_opt::analyses::{
+    alias_analysis::address_space::AddressSpaceAA, memory_ssa::memory_ssa,
 };
 
 #[pliron_op(

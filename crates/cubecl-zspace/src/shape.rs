@@ -120,7 +120,7 @@ impl Shape {
     /// # Example
     ///
     /// ```rust
-    /// use cubecl_zspace::Shape;
+    /// use t4a_cubecl_zspace::Shape;
     ///
     /// fn example() {
     ///     let shape = Shape::new([2, 3, 4]);

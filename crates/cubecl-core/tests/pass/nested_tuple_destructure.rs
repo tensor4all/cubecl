@@ -1,5 +1,5 @@
 use cubecl::prelude::*;
-use cubecl_core as cubecl;
+use t4a_cubecl_core as cubecl;
 
 #[cube]
 fn nested_tuple_destructure(tuple: (u32, u32, (u32, u32, (u32, u32)))) -> u32 {

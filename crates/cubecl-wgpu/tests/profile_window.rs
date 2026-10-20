@@ -14,8 +14,8 @@ use cubecl_core::profile::TimingMethod;
 use cubecl_core::server::Handle;
 use cubecl_environment::future::block_on;
 use cubecl_server::runtime::Runtime;
-use cubecl_wgpu::WgpuRuntime;
 use std::time::Duration;
+use t4a_cubecl_wgpu::WgpuRuntime;
 
 /// Words each unit of [`read_through`] reads for the one it writes.
 const READS_PER_UNIT: usize = 64;

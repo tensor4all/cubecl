@@ -1,23 +1,23 @@
 mod dummy;
 
 use crate::dummy::{DummyDevice, DummyElementwiseAddition, test_client};
-use cubecl_server::memory_management::MemoryScope;
+use t4a_cubecl_server::memory_management::MemoryScope;
 
 use cubecl_common::bytes::Bytes;
 use cubecl_common::device::{DeviceId, ServiceId};
 use cubecl_environment::stream::StreamId;
 use cubecl_ir::{ElemType, FloatKind, UIntKind};
-use cubecl_server::client::{Client, ClientGroup, ClientGroupError, MemberBuffers};
-use cubecl_server::server::{
-    CubeCount, Handle, IoError, KernelArguments, Overlap, ReduceOperation, ServerError,
-};
-use cubecl_server::{
-    local_tuner,
-    tune::{LocalTuner, TunableSet},
-};
 use dummy::*;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use t4a_cubecl_server::client::{Client, ClientGroup, ClientGroupError, MemberBuffers};
+use t4a_cubecl_server::server::{
+    CubeCount, Handle, IoError, KernelArguments, Overlap, ReduceOperation, ServerError,
+};
+use t4a_cubecl_server::{
+    local_tuner,
+    tune::{LocalTuner, TunableSet},
+};
 
 #[test_log::test]
 fn created_resource_is_the_same_when_read() {
@@ -451,13 +451,13 @@ fn execute_elementwise_addition() {
 
 /// A profile the server refuses — as one is inside a graph capture window —
 /// must cost the observer its timing and nothing else: the kernel still runs,
-/// [`launched`](cubecl_server::logging::LaunchObserver::launched) still
+/// [`launched`](t4a_cubecl_server::logging::LaunchObserver::launched) still
 /// arrives, and `timed` is skipped. `serial` because the observer slot, the
 /// refusal toggle, and execution overrides are all process-wide.
 #[test_log::test]
 #[serial_test::serial]
 fn a_refused_profile_degrades_to_an_untimed_launch() {
-    use cubecl_server::logging::{
+    use t4a_cubecl_server::logging::{
         Duration, LaunchObservation, LaunchObserver, TimingMethod, TimingRequest,
     };
 
@@ -616,7 +616,7 @@ fn the_fastest_tunable_hands_back_its_identity() {
 #[cfg(feature = "std")]
 #[serial_test::serial]
 fn a_tune_on_a_lost_device_settles_nothing() {
-    use cubecl_server::execution::{ProcessMode, ProcessModeOverride, StatisticsCollector};
+    use t4a_cubecl_server::execution::{ProcessMode, ProcessModeOverride, StatisticsCollector};
 
     static TUNER: LocalTuner<String, String> =
         local_tuner!("a_tune_on_a_lost_device_settles_nothing");
@@ -737,7 +737,7 @@ fn addition_shapes() -> Vec<Vec<usize>> {
 #[cfg(all(feature = "std", persistence))]
 #[serial_test::serial]
 fn autotune_resets_when_the_environment_switches() {
-    use cubecl_server::tune::{TuneCacheResult, Tuner};
+    use t4a_cubecl_server::tune::{TuneCacheResult, Tuner};
 
     let first = tempfile::tempdir().unwrap();
     let second = tempfile::tempdir().unwrap();
@@ -801,9 +801,9 @@ fn autotune_resets_when_the_environment_switches() {
 /// otherwise load it halfway through and move this test's records elsewhere.
 #[cfg(all(feature = "std", persistence))]
 fn rooted_at(root: &std::path::Path) {
-    use cubecl_server::config::RuntimeConfig;
+    use t4a_cubecl_server::config::RuntimeConfig;
 
-    let _ = cubecl_server::config::CubeClRuntimeConfig::get();
+    let _ = t4a_cubecl_server::config::CubeClRuntimeConfig::get();
     cubecl_environment::environment::set_root(root);
 }
 
@@ -827,7 +827,7 @@ fn recording_at(level: cubecl_environment::records::RecordLevel) {
 fn a_tune_is_recorded_in_order_with_its_walls() {
     use cubecl_environment::persistence::Database;
     use cubecl_environment::records::{RecordLevel, Records};
-    use cubecl_server::tune::{TuneCacheResult, TuneRecord, Tuner};
+    use t4a_cubecl_server::tune::{TuneCacheResult, TuneRecord, Tuner};
 
     let root = tempfile::tempdir().unwrap();
     rooted_at(root.path());
@@ -907,7 +907,7 @@ fn a_tune_is_recorded_in_order_with_its_walls() {
 #[cfg(all(feature = "std", persistence))]
 #[serial_test::serial]
 fn persisted_answers_are_scoped_to_the_adapter_fingerprint() {
-    use cubecl_server::tune::{TuneCacheResult, Tuner};
+    use t4a_cubecl_server::tune::{TuneCacheResult, Tuner};
 
     let root = tempfile::tempdir().unwrap();
     rooted_at(root.path());
@@ -944,7 +944,7 @@ fn persisted_answers_are_scoped_to_the_adapter_fingerprint() {
 fn a_short_circuited_tune_records_where_it_stopped() {
     use cubecl_environment::persistence::Database;
     use cubecl_environment::records::{RecordLevel, Records};
-    use cubecl_server::tune::{TuneRecord, Tuner};
+    use t4a_cubecl_server::tune::{TuneRecord, Tuner};
 
     let root = tempfile::tempdir().unwrap();
     rooted_at(root.path());
@@ -990,7 +990,7 @@ fn a_short_circuited_tune_records_where_it_stopped() {
 fn nothing_is_recorded_when_records_are_off() {
     use cubecl_environment::persistence::Database;
     use cubecl_environment::records::{RecordLevel, Records};
-    use cubecl_server::tune::{TuneCacheResult, TuneRecord, Tuner};
+    use t4a_cubecl_server::tune::{TuneCacheResult, TuneRecord, Tuner};
 
     let root = tempfile::tempdir().unwrap();
     rooted_at(root.path());
@@ -1242,7 +1242,7 @@ fn profile_returns_ok_on_success() {
 #[test_log::test]
 #[cfg(feature = "std")]
 fn exclusive_stays_recoverable_on_task_panic() {
-    use cubecl_server::server::ServerError;
+    use t4a_cubecl_server::server::ServerError;
 
     let client = test_client(&DummyDevice);
 
@@ -1276,7 +1276,7 @@ fn fresh_tune_key_uid() -> String {
 #[cfg(all(feature = "std", not(target_family = "wasm")))]
 fn tune_ranked(
     tuner: &'static LocalTuner<String, String>,
-    patience: cubecl_server::tune::Patience,
+    patience: t4a_cubecl_server::tune::Patience,
     candidates: Vec<(dummy::RankedKernel, dummy::Membership)>,
 ) -> (Vec<u8>, Vec<usize>) {
     use std::sync::Arc;
@@ -1337,8 +1337,8 @@ fn adaptive() -> bool {
 #[cfg(all(feature = "std", not(target_family = "wasm")))]
 #[serial_test::serial]
 fn autotune_patience_stops_measuring_the_group() {
-    use cubecl_server::tune::Patience;
     use dummy::{Membership::*, RankedKernel::*};
+    use t4a_cubecl_server::tune::Patience;
 
     static TUNER: LocalTuner<String, String> = local_tuner!("autotune_patience");
 
@@ -1381,8 +1381,8 @@ fn autotune_patience_stops_measuring_the_group() {
 #[cfg(all(feature = "std", not(target_family = "wasm")))]
 #[serial_test::serial]
 fn autotune_patience_counts_misses_in_a_row_and_not_failures() {
-    use cubecl_server::tune::Patience;
     use dummy::{Membership::*, RankedKernel::*};
+    use t4a_cubecl_server::tune::Patience;
 
     static TUNER: LocalTuner<String, String> = local_tuner!("autotune_patience_misses");
 
@@ -1415,8 +1415,8 @@ fn autotune_patience_counts_misses_in_a_row_and_not_failures() {
 #[cfg(all(feature = "std", not(target_family = "wasm")))]
 #[serial_test::serial]
 fn autotune_patience_measures_the_skipped_when_the_measured_fail() {
-    use cubecl_server::tune::Patience;
     use dummy::{Membership::*, RankedKernel::*};
+    use t4a_cubecl_server::tune::Patience;
 
     static TUNER: LocalTuner<String, String> = local_tuner!("autotune_patience_retry");
 
@@ -1572,9 +1572,9 @@ fn autotune_survives_a_failing_candidate_ahead_of_the_winner() {
 #[cfg(all(feature = "std", not(target_family = "wasm")))]
 #[serial_test::serial]
 fn autotune_stops_sampling_an_eliminated_candidate() {
-    use cubecl_server::config::{CubeClRuntimeConfig, RuntimeConfig};
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use t4a_cubecl_server::config::{CubeClRuntimeConfig, RuntimeConfig};
 
     let bench = CubeClRuntimeConfig::get().autotune.bench.clone();
     if !bench.adaptive {
@@ -1646,14 +1646,14 @@ fn autotune_stops_sampling_an_eliminated_candidate() {
 #[cfg(feature = "std")]
 #[serial_test::serial]
 fn an_override_discards_an_ordinary_launch() {
-    use cubecl_server::execution::{ProcessMode, ProcessModeOverride, StatisticsCollector};
+    use t4a_cubecl_server::execution::{ProcessMode, ProcessModeOverride, StatisticsCollector};
 
     let client = test_client(&DummyDevice);
     let lhs = client.create_from_slice(&[0, 1, 2]);
     let rhs = client.create_from_slice(&[4, 4, 4]);
     let out = client.create_from_slice(&[9, 9, 9]);
 
-    let add = |out: &cubecl_server::server::Handle| {
+    let add = |out: &t4a_cubecl_server::server::Handle| {
         client.launch(
             Box::new(KernelTask::new(DummyElementwiseAddition)),
             CubeCount::Static(1, 1, 1),
@@ -1693,7 +1693,7 @@ fn an_override_discards_an_ordinary_launch() {
 #[cfg(all(feature = "std", not(target_family = "wasm")))]
 #[serial_test::serial]
 fn a_stream_mode_follows_its_client_across_threads() {
-    use cubecl_server::execution::{
+    use t4a_cubecl_server::execution::{
         ProcessMode, ProcessModeOverride, StatisticsCollector, StreamMode, StreamModeOverride,
     };
 
@@ -1754,7 +1754,7 @@ fn a_stream_mode_follows_its_client_across_threads() {
 #[cfg(feature = "std")]
 #[serial_test::serial]
 fn an_override_still_autotunes() {
-    use cubecl_server::execution::{ProcessMode, ProcessModeOverride, StatisticsCollector};
+    use t4a_cubecl_server::execution::{ProcessMode, ProcessModeOverride, StatisticsCollector};
 
     static TUNER: LocalTuner<String, String> = local_tuner!("an_override_still_autotunes");
 
@@ -1804,9 +1804,9 @@ fn an_override_still_autotunes() {
 #[cfg(all(feature = "std", not(target_family = "wasm")))]
 #[serial_test::serial]
 fn a_compile_only_override_leaves_the_tune_to_the_next_pass() {
-    use cubecl_server::execution::{ProcessMode, ProcessModeOverride, StatisticsCollector};
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use t4a_cubecl_server::execution::{ProcessMode, ProcessModeOverride, StatisticsCollector};
 
     static TUNER: LocalTuner<String, String> = local_tuner!("compile_only_override");
 
@@ -1882,8 +1882,8 @@ fn a_compile_only_override_leaves_the_tune_to_the_next_pass() {
 #[cfg(all(feature = "std", not(target_family = "wasm")))]
 #[serial_test::serial]
 fn a_key_reached_inside_another_registers_only_once_tuned() {
-    use cubecl_server::execution::{ProcessMode, ProcessModeOverride, StatisticsCollector};
-    use cubecl_server::tune::{CloneInputGenerator, Tunable};
+    use t4a_cubecl_server::execution::{ProcessMode, ProcessModeOverride, StatisticsCollector};
+    use t4a_cubecl_server::tune::{CloneInputGenerator, Tunable};
 
     static OUTER: LocalTuner<String, String> = local_tuner!("nested_outer");
     static INNER: LocalTuner<String, String> = local_tuner!("nested_inner");
@@ -1978,8 +1978,8 @@ fn a_key_reached_inside_another_registers_only_once_tuned() {
 #[cfg(not(exclusive_memory_only))]
 #[serial_test::serial]
 fn an_override_reserves_without_mapping() {
-    use cubecl_server::execution::{ProcessMode, ProcessModeOverride, StatisticsCollector};
-    use cubecl_server::memory_management::MemoryPoolReport;
+    use t4a_cubecl_server::execution::{ProcessMode, ProcessModeOverride, StatisticsCollector};
+    use t4a_cubecl_server::memory_management::MemoryPoolReport;
 
     let client = test_client(&DummyDevice);
     let execution =
@@ -1993,7 +1993,7 @@ fn an_override_reserves_without_mapping() {
     // The pool the reservation actually landed in — self-identified by the
     // high-water it left, so the test tracks `accept`'s routing instead of
     // predicting it.
-    fn arena(report: &cubecl_server::memory_management::MemoryReport) -> MemoryPoolReport {
+    fn arena(report: &t4a_cubecl_server::memory_management::MemoryReport) -> MemoryPoolReport {
         report
             .streams
             .iter()
@@ -2112,8 +2112,10 @@ fn a_set_is_built_once_per_device_not_once_per_process() {
 fn a_compilation_is_recorded_with_its_outcome() {
     use cubecl_environment::persistence::Database;
     use cubecl_environment::records::{RecordLevel, Records};
-    use cubecl_server::compiler::{CompilationOutcome, CompilationRecord, CompilationRecording};
-    use cubecl_server::id::KernelId;
+    use t4a_cubecl_server::compiler::{
+        CompilationOutcome, CompilationRecord, CompilationRecording,
+    };
+    use t4a_cubecl_server::id::KernelId;
 
     struct Recorded;
 
@@ -2151,8 +2153,8 @@ fn a_compilation_is_recorded_with_its_outcome() {
 fn a_compilation_keeps_its_code_only_when_records_are_full() {
     use cubecl_environment::persistence::Database;
     use cubecl_environment::records::{RecordLevel, Records};
-    use cubecl_server::compiler::{CompilationRecord, CompilationRecording};
-    use cubecl_server::id::KernelId;
+    use t4a_cubecl_server::compiler::{CompilationRecord, CompilationRecording};
+    use t4a_cubecl_server::id::KernelId;
 
     struct Coded;
 
@@ -2166,7 +2168,7 @@ fn a_compilation_keeps_its_code_only_when_records_are_full() {
         let mut recording = CompilationRecording::new(&id);
         recording.source("source");
         recording.close(
-            cubecl_server::compiler::CompilationOutcome::Compiled,
+            t4a_cubecl_server::compiler::CompilationOutcome::Compiled,
             stored,
         );
     }
@@ -2190,10 +2192,10 @@ fn a_compilation_keeps_its_code_only_when_records_are_full() {
 fn a_compile_nothing_stored_leaves_no_session() {
     use cubecl_environment::persistence::{Database, Namespace, Store, StoreOptions};
     use cubecl_environment::records::{RecordLevel, Records};
-    use cubecl_server::compiler::{
+    use t4a_cubecl_server::compiler::{
         CompilationOutcome, CompilationRecord, CompilationRecording, store_compiled,
     };
-    use cubecl_server::id::KernelId;
+    use t4a_cubecl_server::id::KernelId;
 
     struct Unstored;
 
@@ -2224,7 +2226,7 @@ fn a_compile_nothing_stored_leaves_no_session() {
 fn a_memory_snapshot_is_recorded_under_its_label() {
     use cubecl_environment::persistence::Database;
     use cubecl_environment::records::{RecordLevel, Records};
-    use cubecl_server::memory_management::MemoryRecord;
+    use t4a_cubecl_server::memory_management::MemoryRecord;
 
     let root = tempfile::tempdir().unwrap();
     rooted_at(root.path());
@@ -2240,10 +2242,10 @@ fn a_memory_snapshot_is_recorded_under_its_label() {
     );
     // A kernel compiled into the store: the change a build makes.
     struct Stored;
-    let id = cubecl_server::id::KernelId::new::<Stored>();
+    let id = t4a_cubecl_server::id::KernelId::new::<Stored>();
     let stored = true;
-    cubecl_server::compiler::CompilationRecording::new(&id).close(
-        cubecl_server::compiler::CompilationOutcome::Compiled,
+    t4a_cubecl_server::compiler::CompilationRecording::new(&id).close(
+        t4a_cubecl_server::compiler::CompilationOutcome::Compiled,
         stored,
     );
 
@@ -2261,7 +2263,7 @@ fn a_memory_snapshot_is_recorded_under_its_label() {
 #[test_log::test]
 #[serial_test::serial]
 fn a_launch_is_collected_while_a_collection_is_open() {
-    use cubecl_server::launched::LaunchedKernels;
+    use t4a_cubecl_server::launched::LaunchedKernels;
 
     let client = test_client(&DummyDevice);
     let launch = || {
@@ -2269,7 +2271,7 @@ fn a_launch_is_collected_while_a_collection_is_open() {
         let rhs = client.create_from_slice(&[4, 4, 4]);
         let out = client.empty(3);
         let kernel = KernelTask::new(DummyElementwiseAddition);
-        let id = cubecl_server::kernel::KernelMetadata::id(&kernel);
+        let id = t4a_cubecl_server::kernel::KernelMetadata::id(&kernel);
         client.launch(
             Box::new(kernel),
             CubeCount::Static(1, 1, 1),

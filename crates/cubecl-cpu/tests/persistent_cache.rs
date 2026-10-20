@@ -5,8 +5,6 @@
 use cubecl_common::device::DeviceId;
 use cubecl_core as cubecl;
 use cubecl_core::prelude::*;
-use cubecl_cpu::compute::cache::CpuCacheEntry;
-use cubecl_cpu::compute::server::CpuServer;
 use cubecl_environment::persistence::{Database, Store};
 use cubecl_environment::records::{self, RecordLevel, Records, RecordsConfig};
 use cubecl_llvm::PlironEngine;
@@ -15,6 +13,8 @@ use cubecl_server::compiler::{
 };
 use cubecl_server::config::{CubeClRuntimeConfig, RuntimeConfig, compilation::CompilationConfig};
 use std::sync::Mutex;
+use t4a_cubecl_cpu::compute::cache::CpuCacheEntry;
+use t4a_cubecl_cpu::compute::server::CpuServer;
 
 static TEST_LOCK: Mutex<()> = Mutex::new(());
 

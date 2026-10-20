@@ -2,7 +2,7 @@
 //! One test per binary: each reads what the whole memory holds.
 
 use cubecl_core::runtime_tests::relocation;
-use cubecl_wgpu::WgpuRuntime;
+use t4a_cubecl_wgpu::WgpuRuntime;
 
 #[test]
 fn relocation_moves_live_bytes_off_outdated_pages() {

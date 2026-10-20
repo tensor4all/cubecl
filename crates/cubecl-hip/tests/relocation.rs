@@ -2,7 +2,7 @@
 //! One test per binary: each reads what the whole memory holds.
 
 use cubecl_core::runtime_tests::relocation;
-use cubecl_hip::HipRuntime;
+use t4a_cubecl_hip::HipRuntime;
 
 #[test]
 fn relocation_moves_live_bytes_off_outdated_pages() {

@@ -17,7 +17,7 @@
 //! use std::collections::HashMap;
 //! use std::sync::{Arc, Mutex};
 //!
-//! use cubecl_runtime::logging::{LaunchObservation, LaunchObserver};
+//! use t4a_cubecl_runtime::logging::{LaunchObservation, LaunchObserver};
 //!
 //! #[derive(Default)]
 //! struct CountThem(Mutex<HashMap<&'static str, usize>>);

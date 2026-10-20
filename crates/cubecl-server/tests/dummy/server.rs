@@ -10,10 +10,12 @@ use cubecl_ir::{
     metadata::Info,
     settings::{Dim3, ExecutionMode, KernelSettings},
 };
-use cubecl_server::driver::DevicePoison;
-use cubecl_server::memory_management::{Cleanup, PageUpdate};
-use cubecl_server::server::ServerStorage;
-use cubecl_server::{
+use cubecl_zspace::{Shape, Strides};
+use std::sync::Arc;
+use t4a_cubecl_server::driver::DevicePoison;
+use t4a_cubecl_server::memory_management::{Cleanup, PageUpdate};
+use t4a_cubecl_server::server::ServerStorage;
+use t4a_cubecl_server::{
     allocator::ContiguousMemoryLayoutPolicy,
     id::KernelId,
     kernel::{CubeKernel, KernelMetadata},
@@ -29,8 +31,6 @@ use cubecl_server::{
     storage::{BytesResource, BytesStorage, ComputeStorage, ManagedResource},
     timestamp_profiler::TimestampProfiler,
 };
-use cubecl_zspace::{Shape, Strides};
-use std::sync::Arc;
 
 /// Makes `start_profile` fail while set, the way a real server refuses one
 /// inside a graph capture window. Process-wide, so tests that flip it run
@@ -124,11 +124,11 @@ impl core::fmt::Display for KernelTask {
 }
 
 impl CubeKernel for KernelTask {
-    fn define(&self) -> cubecl_server::kernel::KernelDefinition {
+    fn define(&self) -> t4a_cubecl_server::kernel::KernelDefinition {
         // The dummy server runs the kernel directly and never keys a cache, so nothing here is observed.
         let settings =
             KernelSettings::new(Dim3::new_single(), ExecutionMode::Checked, AddressType::U32);
-        cubecl_server::kernel::KernelDefinition {
+        t4a_cubecl_server::kernel::KernelDefinition {
             body: cubecl_ir::Scope::root(settings.clone()),
             settings,
             info: Info::default(),
@@ -155,7 +155,7 @@ impl<M: Marker> Server for DummyServer<M> {
         self.utilities.logger.clone()
     }
 
-    fn utilities(&self) -> Arc<cubecl_server::server::ServerUtilities> {
+    fn utilities(&self) -> Arc<t4a_cubecl_server::server::ServerUtilities> {
         self.utilities.clone()
     }
 
@@ -244,7 +244,7 @@ impl<M: Marker> Server for DummyServer<M> {
         _count: CubeCount,
         bindings: KernelArguments,
         stream_id: StreamId,
-        launch_mode: cubecl_server::execution::LaunchMode,
+        launch_mode: t4a_cubecl_server::execution::LaunchMode,
     ) {
         let kernel = (&*kernel as &dyn core::any::Any)
             .downcast_ref::<KernelTask>()
@@ -257,7 +257,7 @@ impl<M: Marker> Server for DummyServer<M> {
                 // server — only the declared outputs carry the failure, and
                 // the buffers the kernel was only going to read stay
                 // readable for whatever launches next on them.
-                let error = ServerError::from(cubecl_server::server::LaunchError::from(err));
+                let error = ServerError::from(t4a_cubecl_server::server::LaunchError::from(err));
                 self.timestamps.failure(&error);
                 if !launch_mode.discards_launch() {
                     let written: Vec<_> = bindings.buffers_written(None).cloned().collect();
@@ -356,8 +356,8 @@ impl<M: Marker> Server for DummyServer<M> {
     fn memory_report(
         &mut self,
         stream_id: StreamId,
-    ) -> Option<cubecl_server::memory_management::StreamMemoryReport> {
-        Some(cubecl_server::memory_management::StreamMemoryReport {
+    ) -> Option<t4a_cubecl_server::memory_management::StreamMemoryReport> {
+        Some(t4a_cubecl_server::memory_management::StreamMemoryReport {
             stream: stream_id,
             pools: self.memory_management.memory_report(),
             auxiliary: Vec::new(),
@@ -463,7 +463,7 @@ impl<M: Marker> DummyServer<M> {
     /// a read makes, through the same [`ErrorGraph::reports`] a real server's
     /// [`StreamPool::ensure_written`] goes through.
     ///
-    /// [`StreamPool::ensure_written`]: cubecl_server::stream::StreamPool::ensure_written
+    /// [`StreamPool::ensure_written`]: t4a_cubecl_server::stream::StreamPool::ensure_written
     fn ensure_written<'a>(
         &self,
         handles: impl Iterator<Item = &'a BufferBinding>,

@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use cubecl::benchmark::{Benchmark, TimingMethod};
 use cubecl::{Device, future, prelude::*};
-use cubecl_example::gpu_tensor::GpuTensor; // Change to the path of your own module containing the GpuTensor
+use t4a_cubecl_example::gpu_tensor::GpuTensor; // Change to the path of your own module containing the GpuTensor
 
 pub struct ReductionBench<F: Float + CubeElement> {
     input_shape: Vec<usize>,

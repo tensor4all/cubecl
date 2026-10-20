@@ -5,10 +5,6 @@ use cubecl_environment::bundle::{BundleManifest, EnvironmentInfo, MANIFEST_SCHEM
 use cubecl_environment::persistence::{Access, Database, Origin};
 use cubecl_environment::records::{self, MarkRecord, Record, Session, SessionId, Stamp, Stamped};
 use cubecl_environment::stream::StreamId;
-use cubecl_inspect::report::{
-    CandidateOutcome, CandidateReport, Fate, KernelSelector, KeyId, KeyOrder,
-};
-use cubecl_inspect::{EnvironmentDirectory, InspectError, Inspector};
 use cubecl_server::benchmark::BenchmarkComputations;
 use cubecl_server::compiler::{
     CompilationBatchRecord, CompilationOutcome, CompilationRecord, KernelCacheKey,
@@ -23,6 +19,10 @@ use cubecl_server::tune::{
 };
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+use t4a_cubecl_inspect::report::{
+    CandidateOutcome, CandidateReport, Fate, KernelSelector, KeyId, KeyOrder,
+};
+use t4a_cubecl_inspect::{EnvironmentDirectory, InspectError, Inspector};
 
 const GEMM: &str = "autotune/0.11.0/hip-kernel_gfx1151/hip-0/matmul-tune-gemm";
 const NORM: &str = "autotune/0.11.0/hip-kernel_gfx1151/hip-0/rms-norm";
@@ -419,7 +419,7 @@ fn every_key_decodes_without_its_type() {
         .find(|key| key.table.tuner == "matmul-tune-gemm" && key.results.len() == 4)
         .expect("the m=64 key");
     assert_eq!(
-        cubecl_inspect::view::KeyText(&gemm.key).to_string(),
+        t4a_cubecl_inspect::view::KeyText(&gemm.key).to_string(),
         "m=64 elem=Float(F16)"
     );
     assert_eq!(gemm.checksum, "list-a");
@@ -513,7 +513,7 @@ fn a_listing_reads_every_file_and_names_the_unreadable() {
     std::fs::write(dir.path().join("broken.cubecl"), b"not a database").expect("writes");
     std::fs::write(dir.path().join("notes.txt"), b"ignored").expect("writes");
 
-    let listing = cubecl_inspect::list(&[saved(dir.path())]);
+    let listing = t4a_cubecl_inspect::list(&[saved(dir.path())]);
     assert_eq!(listing.environments.len(), 1);
     assert_eq!(listing.unreadable.len(), 1);
 }
@@ -527,7 +527,7 @@ fn a_listing_spans_directories() {
     fixture(first.path());
     fixture(second.path());
 
-    let listing = cubecl_inspect::list(&[saved(first.path()), saved(second.path())]);
+    let listing = t4a_cubecl_inspect::list(&[saved(first.path()), saved(second.path())]);
 
     assert_eq!(listing.directories.len(), 2);
     assert_eq!(listing.environments.len(), 2);
@@ -543,7 +543,7 @@ fn an_extension_reads_with_or_without_its_dot() {
         path: dir.path().to_path_buf(),
         extension: ".cubecl".to_string(),
     };
-    assert_eq!(cubecl_inspect::list(&[dotted]).environments.len(), 1);
+    assert_eq!(t4a_cubecl_inspect::list(&[dotted]).environments.len(), 1);
 }
 
 /// A directory that cannot be read is named in the listing, and the others
@@ -555,7 +555,7 @@ fn an_unreadable_directory_is_listed_beside_the_others() {
     // A file where a directory is expected: reading it fails.
     let not_a_directory = dir.path().join("fixture.cubecl");
 
-    let listing = cubecl_inspect::list(&[saved(&not_a_directory), saved(dir.path())]);
+    let listing = t4a_cubecl_inspect::list(&[saved(&not_a_directory), saved(dir.path())]);
 
     assert_eq!(listing.environments.len(), 1);
     assert_eq!(listing.unreadable.len(), 1);
@@ -565,7 +565,7 @@ fn an_unreadable_directory_is_listed_beside_the_others() {
 #[test]
 fn a_missing_directory_lists_nothing() {
     let dir = tempfile::tempdir().expect("a temp dir");
-    let listing = cubecl_inspect::list(&[saved(&dir.path().join("never-built"))]);
+    let listing = t4a_cubecl_inspect::list(&[saved(&dir.path().join("never-built"))]);
     assert!(listing.environments.is_empty());
     assert!(listing.unreadable.is_empty());
 }
@@ -1006,7 +1006,7 @@ fn rebuilt(dir: &Path) -> PathBuf {
 
 #[test]
 fn a_diff_names_what_was_added_removed_and_answered_differently() {
-    use cubecl_inspect::report::KeyChange;
+    use t4a_cubecl_inspect::report::KeyChange;
 
     let dir = tempfile::tempdir().expect("a temp dir");
     let before = Inspector::open(fixture(dir.path())).expect("opens");
@@ -1030,7 +1030,7 @@ fn a_diff_names_what_was_added_removed_and_answered_differently() {
     );
     assert!(!changed.candidates_changed(), "the same list: variance");
     assert_eq!(
-        cubecl_inspect::view::KeyText(&changed.key).to_string(),
+        t4a_cubecl_inspect::view::KeyText(&changed.key).to_string(),
         "m=128 elem=Float(F16)"
     );
 }
@@ -1039,8 +1039,8 @@ fn a_diff_names_what_was_added_removed_and_answered_differently() {
 /// the two apart, and its text says which adapter each answers for.
 #[test]
 fn a_diff_tells_apart_keys_of_two_adapters() {
-    use cubecl_inspect::report::KeyChange;
-    use cubecl_inspect::view::Text;
+    use t4a_cubecl_inspect::report::KeyChange;
+    use t4a_cubecl_inspect::view::Text;
 
     let dir = tempfile::tempdir().expect("a temp dir");
     let before = Inspector::open(fixture(dir.path())).expect("opens");
@@ -1083,7 +1083,7 @@ fn a_diff_tells_apart_keys_of_two_adapters() {
 /// "0.11.0" as text.
 #[test]
 fn a_diff_reads_a_keys_newest_version() {
-    use cubecl_inspect::report::KeyChange;
+    use t4a_cubecl_inspect::report::KeyChange;
 
     let dir = tempfile::tempdir().expect("a temp dir");
     let before = Inspector::open(fixture(dir.path())).expect("opens");

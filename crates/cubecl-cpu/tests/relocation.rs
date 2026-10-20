@@ -4,7 +4,7 @@
 //! holds, which a test running beside it would change.
 
 use cubecl_core::runtime_tests::relocation;
-use cubecl_cpu::CpuRuntime;
+use t4a_cubecl_cpu::CpuRuntime;
 
 #[test]
 fn relocation() {

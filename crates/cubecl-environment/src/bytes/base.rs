@@ -387,7 +387,7 @@ impl Bytes {
     /// # Example
     ///
     /// ```
-    /// use cubecl_environment::bytes::{Bytes, AllocationProperty};
+    /// use t4a_cubecl_environment::bytes::{Bytes, AllocationProperty};
     ///
     /// // Memory-mapped file data - use File property for optimized GPU transfers
     /// let mmap_bytes = bytes::Bytes::from_static(&[1, 2, 3, 4]); // pretend this is mmap

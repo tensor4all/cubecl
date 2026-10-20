@@ -491,6 +491,7 @@ fn tensor_cores_per_sm(arch: &CudaArchitecture) -> Option<u32> {
 impl Runtime for CudaRuntime {
     type Server = CudaServer;
     type Device = CudaDevice;
+    type ExternalStream = cudarc::driver::sys::CUstream;
 
     fn can_read_tensor(shape: &Shape, strides: &Strides) -> bool {
         has_pitched_row_major_strides(shape, strides)

@@ -39,7 +39,6 @@ mod tests {
     cubecl_std::testgen_tensor_identity!([flex32, f32, u32]);
     cubecl_std::testgen_quantized_view!(f32);
     cubecl_core::testgen_profiling!();
-
     /// A kernel that brings its own WGSL, the way a template kernel downstream
     /// does: no representation for the runtime to read, only text for naga.
     mod precompiled {
@@ -204,6 +203,11 @@ fn double(@builtin(global_invocation_id) id: vec3<u32>) {
     }
 
     cubecl_core::testgen_complex_validation!();
+    cubecl_core::testgen_external_op!(
+        cubecl_core::runtime_tests::external_op::refused_copy::<TestRuntime>,
+        cubecl_core::runtime_tests::external_op::refused_fill::<TestRuntime>,
+        false
+    );
 }
 
 #[cfg(all(test, feature = "spirv"))]
@@ -218,6 +222,11 @@ mod tests_spirv {
     cubecl_std::testgen_tensor_identity!([f16, flex32, f32, u32]);
     cubecl_std::testgen_quantized_view!(f16);
     cubecl_core::testgen_profiling!();
+    cubecl_core::testgen_external_op!(
+        cubecl_core::runtime_tests::external_op::refused_copy::<TestRuntime>,
+        cubecl_core::runtime_tests::external_op::refused_fill::<TestRuntime>,
+        false
+    );
 }
 
 #[cfg(all(test, feature = "msl"))]
@@ -235,4 +244,9 @@ mod tests_msl {
     // buffer completes, so a window's end waits for the device, and an enclosing window measures
     // that idle gap. Add it once the readback is deferred instead of waited for.
     cubecl_core::testgen_complex_validation!();
+    cubecl_core::testgen_external_op!(
+        cubecl_core::runtime_tests::external_op::refused_copy::<TestRuntime>,
+        cubecl_core::runtime_tests::external_op::refused_fill::<TestRuntime>,
+        false
+    );
 }

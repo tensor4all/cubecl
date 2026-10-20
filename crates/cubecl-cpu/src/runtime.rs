@@ -283,6 +283,7 @@ impl DeviceService for CpuServer {
 impl Runtime for CpuRuntime {
     type Server = CpuServer;
     type Device = CpuDevice;
+    type ExternalStream = ();
 
     fn can_read_tensor(shape: &Shape, strides: &Strides) -> bool {
         is_contiguous(shape, strides)

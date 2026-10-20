@@ -17,8 +17,9 @@ use cubecl_core::{
     ir::MemoryDeviceProperties,
     prelude::*,
     server::{
-        BufferBinding, CopyDescriptor, Handle, KernelArguments, KernelResource, ProfileError,
-        ProfilingToken, ServerCommunication, ServerError, ServerUtilities,
+        BufferBinding, CopyDescriptor, ExternalContext, ExternalOpCallback, Handle,
+        KernelArguments, KernelResource, ProfileError, ProfilingToken, ServerCommunication,
+        ServerError, ServerUtilities,
     },
 };
 use cubecl_environment::future;
@@ -36,9 +37,16 @@ use cubecl_server::{
     memory_management::{ManagedMemoryHandle, MemoryAllocationMode, StreamMemoryReport},
     server::Server,
     storage::{ComputeStorage, ManagedResource},
-    stream::{ExecuteScope, FailureStore, MultiStream, StreamCapture, WriteScoped, failed_writing},
+    stream::{
+        ExecuteScope, FailureStore, MultiStream, StreamCapture, WriteScoped, external_op_panicked,
+        failed_writing,
+    },
 };
 use std::{collections::HashMap, sync::Arc};
+
+/// The identity an external operation's skip record carries in the failure
+/// graph, exactly as on CUDA.
+struct ExternalOpKernel;
 
 #[derive(Debug)]
 pub struct HipServer {
@@ -208,6 +216,72 @@ impl Server for HipServer {
             written,
         )
         .execute(|server| server.launch_checked(kernel_id, &loaded, count, bindings, stream_id));
+    }
+
+    fn external_op(
+        &mut self,
+        reads: Vec<BufferBinding>,
+        writes: Vec<BufferBinding>,
+        op: ExternalOpCallback,
+        stream_id: StreamId,
+    ) {
+        let mut written = self.write_set();
+        written.extend(writes.iter().cloned());
+        let scope_reads = reads.clone();
+
+        ExecuteScope::launching(
+            self,
+            KernelId::new::<ExternalOpKernel>(),
+            stream_id,
+            scope_reads.iter(),
+            written,
+        )
+        .execute(move |server| {
+            // A host-side call is not replayable work: refuse it inside the
+            // scope so the capture it interrupts is doomed rather than sealed
+            // without it.
+            if server
+                .streams
+                .try_stream_mut(&stream_id)
+                .is_some_and(|stream| stream.capturing.is_recording())
+            {
+                return Err(ServerError::graph_state(
+                    "external_op: a capture window records launches only, so an external \
+                     operation has no recorded form",
+                ));
+            }
+
+            let mut command = server.command(stream_id, reads.iter().chain(writes.iter()))?;
+            let stream = command.stream().sys;
+            let mut read_ptrs = Vec::with_capacity(reads.len());
+            let mut write_ptrs = Vec::with_capacity(writes.len());
+
+            for binding in &reads {
+                read_ptrs.push(command.resource(binding.clone())?.ptr as u64);
+            }
+            for binding in &writes {
+                write_ptrs.push(command.resource(binding.clone())?.ptr as u64);
+            }
+
+            // Arbitrary code on the device thread: catch a panic here so the
+            // scope settles the write set and the capture lifecycle stays
+            // consistent.
+            let mut context =
+                ExternalContext::new(&stream as &dyn core::any::Any, &read_ptrs, &write_ptrs);
+            let called =
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| op(&mut context)));
+            let retained = context.into_retained();
+
+            // The bindings and every owner the operation registered stay alive
+            // until the stream reaches the work queued after it, on success,
+            // error or panic alike, using the same deferred-release path as a
+            // cross-stream pin.
+            command.defer_release((reads, writes, retained));
+            match called {
+                Ok(result) => result,
+                Err(payload) => Err(external_op_panicked(payload)),
+            }
+        });
     }
 
     fn check(

@@ -93,4 +93,46 @@ mod tests {
     cubecl_core::testgen_complex_validation!();
     cubecl_core::testgen_profiling!();
     cubecl_core::testgen_profiling_nested!();
+
+    fn external_op_copy(
+        stream: cudarc::driver::sys::CUstream,
+        src: u64,
+        dst: u64,
+        len: u64,
+    ) -> Result<(), cubecl_core::server::ServerError> {
+        // SAFETY: the test keeps both allocations alive until the stream has
+        // run the copy and the read that follows it.
+        unsafe {
+            cudarc::driver::sys::cuMemcpyDtoDAsync_v2(dst, src, len as usize, stream)
+                .result()
+                .map_err(|err| cubecl_core::server::ServerError::Generic {
+                    reason: format!("cuMemcpyDtoDAsync_v2 failed: {err:?}"),
+                    backtrace: cubecl_core::environment::backtrace::BackTrace::capture(),
+                })
+        }
+    }
+
+    fn external_op_fill(
+        stream: cudarc::driver::sys::CUstream,
+        dst: u64,
+        len: u64,
+        value: u32,
+    ) -> Result<(), cubecl_core::server::ServerError> {
+        // SAFETY: the test fills a live device allocation of `len` bytes.
+        unsafe {
+            cudarc::driver::sys::cuMemsetD32Async(
+                dst,
+                value,
+                len as usize / core::mem::size_of::<u32>(),
+                stream,
+            )
+            .result()
+            .map_err(|err| cubecl_core::server::ServerError::Generic {
+                reason: format!("cuMemsetD32Async failed: {err:?}"),
+                backtrace: cubecl_core::environment::backtrace::BackTrace::capture(),
+            })
+        }
+    }
+
+    cubecl_core::testgen_external_op!(external_op_copy, external_op_fill, true);
 }

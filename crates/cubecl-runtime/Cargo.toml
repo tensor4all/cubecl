@@ -33,7 +33,7 @@ default = [
     "cubecl-common/default",
 ]
 exclusive-memory-only = []
-profile-tracy = ["dep:tracy-client"]
+profile-tracy = ["dep:tracy-client", "dep:web-time"]
 std = ["cubecl-common/std", "toml", "dirs", "thiserror/std"]
 storage-bytes = []
 
@@ -59,7 +59,7 @@ enumset = { workspace = true }
 hashbrown = { workspace = true }
 serde = { workspace = true }
 toml = { workspace = true, optional = true }
-web-time = { workspace = true }
+web-time = { workspace = true, optional = true }
 
 thiserror = { workspace = true }
 ahash = { version = "0.8.12", default-features = false }

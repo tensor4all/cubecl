@@ -7,4 +7,25 @@
 # See example file at: https://github.com/rustsec/rustsec/blob/main/cargo-audit/audit.toml.example
 
 [advisories]
-ignore = []
+# Why this list is not empty:
+#
+# `xtask` is `publish = false` and is the only consumer of the affected chain:
+#
+#     xtask -> tracel-xtask 4.16.0 -> zip 6.0.0 (zstd feature)
+#           -> zstd 0.13.3 -> zstd-safe 7.3.0
+#
+# `cargo tree -i zip` and `cargo tree -i zstd-safe` end at `xtask`; no published
+# `t4a-*` crate reaches either, so nothing we ship contains the affected code.
+# The zip findings need zip >= 9.0.0 and the zstd findings need zstd >= 0.14.3 /
+# zstd-safe >= 8.2.0, and `tracel-xtask 4.x` pins `zip ^6.0.0`, so the fix is a
+# port of `xtask` to `tracel-xtask 5.x`, which does not depend on zip at all.
+# That port is a separate change: 5.x renames the prelude types the xtask
+# commands use. Remove these six entries when it lands.
+ignore = [
+  "RUSTSEC-2026-0367", # zip 6.0.0: SUID/SGID bits preserved on extraction
+  "RUSTSEC-2026-0368", # zip 6.0.0: extract() symlink target escapes the destination
+  "RUSTSEC-2026-0369", # zip 6.0.0: permissions applied through symlinks, target not confined
+  "RUSTSEC-2026-0391", # zstd 0.13.3: abandoned stream leaks data into the next stream
+  "RUSTSEC-2026-0398", # zstd-safe 7.3.0: Seekable::decompress sets a length past capacity
+  "RUSTSEC-2026-0403", # zstd-safe 7.3.0: uninitialized memory on failed legacy-frame decode
+]

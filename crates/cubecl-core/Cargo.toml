@@ -38,6 +38,8 @@ tracing = { workspace = true, features = ["attributes"], optional = true }
 
 cubecl-ir = { package = "t4a-cubecl-ir", path = "../cubecl-ir", version = "0.10.3", default-features = false, features = [
     "serde",
+    "fp4",
+    "fp8",
 ] }
 cubecl-runtime = { package = "t4a-cubecl-runtime", path = "../cubecl-runtime", version = "0.10.3", default-features = false }
 cubecl-zspace = { package = "t4a-cubecl-zspace", path = "../cubecl-zspace", version = "0.10.3" }

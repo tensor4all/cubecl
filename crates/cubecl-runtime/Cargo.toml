@@ -34,7 +34,15 @@ default = [
 ]
 exclusive-memory-only = []
 profile-tracy = ["dep:tracy-client", "dep:web-time"]
-std = ["dep:async-channel", "cubecl-common/std", "toml", "dirs", "thiserror/std"]
+std = [
+    "dep:async-channel",
+    "cubecl-common/std",
+    "toml",
+    "dirs",
+    "thiserror/std",
+    "cubecl-ir/fp4",
+    "cubecl-ir/fp8",
+]
 storage-bytes = []
 
 tracing = ["dep:tracing", "cubecl-common/tracing", "cubecl-ir/tracing"]

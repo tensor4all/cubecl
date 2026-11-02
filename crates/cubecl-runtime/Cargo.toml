@@ -34,7 +34,7 @@ default = [
 ]
 exclusive-memory-only = []
 profile-tracy = ["dep:tracy-client", "dep:web-time"]
-std = ["cubecl-common/std", "toml", "dirs", "thiserror/std"]
+std = ["dep:async-channel", "cubecl-common/std", "toml", "dirs", "thiserror/std"]
 storage-bytes = []
 
 tracing = ["dep:tracing", "cubecl-common/tracing", "cubecl-ir/tracing"]
@@ -44,7 +44,7 @@ tracing = ["dep:tracing", "cubecl-common/tracing", "cubecl-ir/tracing"]
 log = { workspace = true }
 tracing = { workspace = true, features = ["attributes"], optional = true }
 
-async-channel = { workspace = true } # Assume std
+async-channel = { workspace = true, optional = true } # std only: the logging thread drains it
 bytemuck = { workspace = true }
 cfg-if = { workspace = true }
 cubecl-common = { package = "t4a-cubecl-common", path = "../cubecl-common", version = "0.10.3", default-features = false }

@@ -12,6 +12,8 @@ use crate::{
     server::IoError,
     storage::{ComputeStorage, StorageHandle},
 };
+#[cfg(not(feature = "std"))]
+use num_traits::Float;
 
 use alloc::format;
 use alloc::string::{String, ToString};

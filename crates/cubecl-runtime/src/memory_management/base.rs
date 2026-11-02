@@ -1,4 +1,6 @@
 use alloc::string::{String, ToString};
+#[cfg(not(feature = "std"))]
+use num_traits::Float;
 
 /// Amount of memory in use by this allocator
 /// and statistics on how much memory is reserved and

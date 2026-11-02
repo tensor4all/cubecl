@@ -1,4 +1,6 @@
 use core::sync::atomic::{AtomicI32, Ordering};
+#[cfg(not(feature = "std"))]
+use num_traits::Float;
 
 use crate::config::{CubeClRuntimeConfig, RuntimeConfig};
 

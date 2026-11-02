@@ -50,12 +50,13 @@ tracing = ["dep:tracing", "cubecl-common/tracing", "cubecl-ir/tracing"]
 [dependencies]
 # Runtime Deps
 log = { workspace = true }
+num-traits = { workspace = true }
 tracing = { workspace = true, features = ["attributes"], optional = true }
 
 async-channel = { workspace = true, optional = true } # std only: the logging thread drains it
 bytemuck = { workspace = true }
 cfg-if = { workspace = true }
-cubecl-common = { package = "t4a-cubecl-common", path = "../cubecl-common", version = "0.10.3", default-features = false }
+cubecl-common = { package = "t4a-cubecl-common", path = "../cubecl-common", version = "0.10.3", default-features = false, features = ["hash", "serde"] }
 cubecl-ir = { package = "t4a-cubecl-ir", path = "../cubecl-ir", version = "0.10.3", default-features = false, features = [
     "serde",
 ] }

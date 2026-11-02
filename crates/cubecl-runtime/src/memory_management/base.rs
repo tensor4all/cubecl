@@ -51,7 +51,7 @@ impl core::fmt::Display for BytesFormat {
             f.write_fmt(format_args!("{} B", self.bytes))
         } else {
             let size = self.bytes as f64;
-            let exp = match size.log(1000.0).floor() as usize {
+            let exp = match crate::math::floor(crate::math::log(size, 1000.0)) as usize {
                 0 => 1,
                 e => e,
             };

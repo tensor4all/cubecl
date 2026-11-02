@@ -281,7 +281,13 @@ async fn process_request<K: AutotuneKey>(
         let timing_method = profiles.first().unwrap().timing_method();
         let mut durations = Vec::with_capacity(profiles.len());
         for profile in profiles {
-            durations.push(profile.resolve().await.duration());
+            let duration = profile.resolve().await.duration();
+            #[cfg(feature = "std")]
+            durations.push(duration);
+            #[cfg(not(feature = "std"))]
+            durations.push(core::time::Duration::from_micros(
+                u64::try_from(duration.as_micros()).unwrap_or(u64::MAX),
+            ));
         }
 
         results[index] = AutotuneResult::success(AutotuneOutcome::new(

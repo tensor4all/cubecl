@@ -1,4 +1,5 @@
-#[cfg_attr(not(feature = "std"), allow(dead_code))] // Profiled/ProfileItem are consumed by the std logger only
+#[cfg_attr(not(feature = "std"), allow(dead_code))]
+// Profiled/ProfileItem are consumed by the std logger only
 mod profiling;
 pub use profiling::*;
 

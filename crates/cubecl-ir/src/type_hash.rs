@@ -113,17 +113,19 @@ impl_type_hash!(
     portable_atomic::AtomicBool,
     portable_atomic::AtomicI16,
     portable_atomic::AtomicI32,
-    portable_atomic::AtomicI64,
     portable_atomic::AtomicI8,
     portable_atomic::AtomicIsize,
     portable_atomic::AtomicPtr<T>,
     portable_atomic::AtomicU16,
     portable_atomic::AtomicU32,
-    portable_atomic::AtomicU64,
     portable_atomic::AtomicU8,
     portable_atomic::AtomicUsize,
     enumset::EnumSet<T: EnumSetType>,
 );
+
+portable_atomic::cfg_has_atomic_64! {
+    impl_type_hash!(portable_atomic::AtomicI64, portable_atomic::AtomicU64,);
+}
 
 macro_rules! impl_type_hash_tuple {
     ($($T: ident),*) => {

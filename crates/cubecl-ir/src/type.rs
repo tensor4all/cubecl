@@ -1,11 +1,15 @@
 use super::{ConstantValue, Variable, VariableKind};
 use crate::{BarrierLevel, TypeHash};
 use core::fmt::Display;
+#[cfg(feature = "fp4")]
+use cubecl_common::{e2m1, e2m1x2};
 use cubecl_common::{
-    e2m1, e2m1x2, e2m3, e3m2, e4m3, e5m2, flex32,
+    e2m3, e3m2, flex32,
     quant::scheme::{QuantParam, QuantValue},
-    tf32, ue8m0,
+    tf32,
 };
+#[cfg(feature = "fp8")]
+use cubecl_common::{e4m3, e5m2, ue8m0};
 use derive_more::From;
 use half::{bf16, f16};
 
@@ -265,12 +269,12 @@ impl ElemType {
     pub fn max_variable(&self) -> Variable {
         let value = match self {
             ElemType::Float(kind) => match kind {
-                FloatKind::E2M1 => e2m1::MAX,
+                FloatKind::E2M1 => 6.0, // Same range as cubecl-common's no-std quant scheme.
                 FloatKind::E2M3 => e2m3::MAX,
                 FloatKind::E3M2 => e3m2::MAX,
-                FloatKind::E4M3 => e4m3::MAX,
-                FloatKind::E5M2 => e5m2::MAX,
-                FloatKind::UE8M0 => ue8m0::MAX,
+                FloatKind::E4M3 => 416.0,
+                FloatKind::E5M2 => 49152.0,
+                FloatKind::UE8M0 => f64::from_bits(0x47e0000000000000),
                 FloatKind::F16 => half::f16::MAX.to_f64(),
                 FloatKind::BF16 => half::bf16::MAX.to_f64(),
                 FloatKind::Flex32 | FloatKind::TF32 | FloatKind::F32 => f32::MAX as f64,
@@ -301,12 +305,12 @@ impl ElemType {
     pub fn min_variable(&self) -> Variable {
         let value = match self {
             ElemType::Float(kind) => match kind {
-                FloatKind::E2M1 => e2m1::MIN,
+                FloatKind::E2M1 => -6.0,
                 FloatKind::E2M3 => e2m3::MIN,
                 FloatKind::E3M2 => e3m2::MIN,
-                FloatKind::E4M3 => e4m3::MIN,
-                FloatKind::E5M2 => e5m2::MIN,
-                FloatKind::UE8M0 => ue8m0::MIN,
+                FloatKind::E4M3 => -416.0,
+                FloatKind::E5M2 => -49152.0,
+                FloatKind::UE8M0 => 0.0,
                 FloatKind::F16 => half::f16::MIN.to_f64(),
                 FloatKind::BF16 => half::bf16::MIN.to_f64(),
                 FloatKind::Flex32 | FloatKind::TF32 | FloatKind::F32 => f32::MIN as f64,
@@ -337,12 +341,12 @@ impl ElemType {
     pub fn epsilon(&self) -> f64 {
         match self {
             ElemType::Float(kind) => match kind {
-                FloatKind::E2M1 => 0.5 * (e2m1::MAX - e2m1::MIN),
+                FloatKind::E2M1 => 6.0,
                 FloatKind::E2M3 => 0.5 * (e2m3::MAX - e2m3::MIN),
                 FloatKind::E3M2 => 0.5 * (e3m2::MAX - e3m2::MIN),
-                FloatKind::E4M3 => 0.5 * (e4m3::MAX - e4m3::MIN),
-                FloatKind::E5M2 => 0.5 * (e5m2::MAX - e5m2::MIN),
-                FloatKind::UE8M0 => 0.5 * (ue8m0::MAX - ue8m0::MIN),
+                FloatKind::E4M3 => 416.0,
+                FloatKind::E5M2 => 49152.0,
+                FloatKind::UE8M0 => 0.5 * f64::from_bits(0x47e0000000000000),
                 FloatKind::F16 => half::f16::EPSILON.to_f64(),
                 FloatKind::BF16 => 0.0078125, // bf16 epsilon ≈ 2^-7
                 FloatKind::Flex32 | FloatKind::F32 | FloatKind::TF32 => f32::EPSILON.into(),
@@ -668,6 +672,7 @@ impl Display for OpaqueType {
     }
 }
 
+#[cfg(feature = "fp4")]
 impl From<e2m1x2> for Variable {
     fn from(_value: e2m1x2) -> Self {
         unimplemented!("Can't currently construct e2m1x2")
@@ -734,24 +739,28 @@ impl From<usize> for ConstantValue {
     }
 }
 
+#[cfg(feature = "fp4")]
 impl From<e2m1> for ConstantValue {
     fn from(value: e2m1) -> Self {
         ConstantValue::Float(value.to_f64())
     }
 }
 
+#[cfg(feature = "fp8")]
 impl From<e4m3> for ConstantValue {
     fn from(value: e4m3) -> Self {
         ConstantValue::Float(value.to_f64())
     }
 }
 
+#[cfg(feature = "fp8")]
 impl From<e5m2> for ConstantValue {
     fn from(value: e5m2) -> Self {
         ConstantValue::Float(value.to_f64())
     }
 }
 
+#[cfg(feature = "fp8")]
 impl From<ue8m0> for ConstantValue {
     fn from(value: ue8m0) -> Self {
         ConstantValue::Float(value.to_f64())
@@ -813,10 +822,6 @@ impl_into_variable!(
     u32 => UIntKind::U32,
     u64 => UIntKind::U64,
 
-    e2m1 => FloatKind::E2M1,
-    e4m3 => FloatKind::E4M3,
-    e5m2 => FloatKind::E5M2,
-    ue8m0 => FloatKind::UE8M0,
     f16 => FloatKind::F16,
     bf16 => FloatKind::BF16,
     f32 => FloatKind::F32,
@@ -826,6 +831,15 @@ impl_into_variable!(
 
     usize => UIntKind::U32,
     isize => IntKind::I32,
+);
+
+#[cfg(feature = "fp4")]
+impl_into_variable!(e2m1 => FloatKind::E2M1,);
+#[cfg(feature = "fp8")]
+impl_into_variable!(
+    e4m3 => FloatKind::E4M3,
+    e5m2 => FloatKind::E5M2,
+    ue8m0 => FloatKind::UE8M0,
 );
 
 impl From<num_complex::Complex<f32>> for Variable {

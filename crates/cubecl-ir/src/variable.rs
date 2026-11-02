@@ -3,7 +3,10 @@ use core::{fmt::Display, hash::Hash};
 use crate::{BarrierLevel, FloatKind, IntKind, StorageType, TypeHash};
 
 use super::{ComplexKind, ElemType, Matrix, Type, UIntKind};
-use cubecl_common::{e2m1, e4m3, e5m2, ue8m0};
+#[cfg(feature = "fp4")]
+use cubecl_common::e2m1;
+#[cfg(feature = "fp8")]
+use cubecl_common::{e4m3, e5m2, ue8m0};
 use derive_more::From;
 use float_ord::FloatOrd;
 
@@ -462,13 +465,23 @@ impl ConstantValue {
         match other.into().storage_type() {
             StorageType::Scalar(elem_type) => match elem_type {
                 ElemType::Float(kind) => match kind {
+                    #[cfg(feature = "fp4")]
                     FloatKind::E2M1 => e2m1::from_f64(self.as_f64()).to_f64(),
+                    #[cfg(not(feature = "fp4"))]
+                    FloatKind::E2M1 => unimplemented!("e2m1 constants require the fp4 feature"),
                     FloatKind::E2M3 | FloatKind::E3M2 => {
                         unimplemented!("FP6 constants not yet supported")
                     }
+                    #[cfg(feature = "fp8")]
                     FloatKind::E4M3 => e4m3::from_f64(self.as_f64()).to_f64(),
+                    #[cfg(feature = "fp8")]
                     FloatKind::E5M2 => e5m2::from_f64(self.as_f64()).to_f64(),
+                    #[cfg(feature = "fp8")]
                     FloatKind::UE8M0 => ue8m0::from_f64(self.as_f64()).to_f64(),
+                    #[cfg(not(feature = "fp8"))]
+                    FloatKind::E4M3 | FloatKind::E5M2 | FloatKind::UE8M0 => {
+                        unimplemented!("fp8 constants require the fp8 feature")
+                    }
                     FloatKind::F16 => half::f16::from_f64(self.as_f64()).to_f64(),
                     FloatKind::BF16 => half::bf16::from_f64(self.as_f64()).to_f64(),
                     FloatKind::Flex32 | FloatKind::TF32 | FloatKind::F32 => {
@@ -523,8 +536,13 @@ impl ConstantValue {
                     (_, ComplexKind::C64) => ConstantValue::Complex(self.as_f64(), 0.0),
                 },
             },
+            #[cfg(feature = "fp4")]
             StorageType::Packed(ElemType::Float(FloatKind::E2M1), 2) => {
                 e2m1::from_f64(self.as_f64()).to_f64().into()
+            }
+            #[cfg(not(feature = "fp4"))]
+            StorageType::Packed(ElemType::Float(FloatKind::E2M1), 2) => {
+                unimplemented!("e2m1 constants require the fp4 feature")
             }
             StorageType::Packed(..) => unimplemented!("Unsupported packed type"),
             StorageType::Atomic(_) => unimplemented!("Atomic constants aren't supported"),

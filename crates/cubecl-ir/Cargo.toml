@@ -23,18 +23,18 @@ workspace = true
 
 
 [features]
-default = ["serde", "std"]
+default = ["serde", "std", "fp4", "fp8"]
 
 serde = ["dep:serde", "hashbrown/serde", "enumset/serde"]
 std = []
+fp4 = ["cubecl-common/fp4"]
+# UE8M0 conversions in cubecl-common use the optional float4 dependency.
+fp8 = ["cubecl-common/fp8", "cubecl-common/float4"]
 
 tracing = ["cubecl-common/tracing"]
 
 [dependencies]
-cubecl-common = { package = "t4a-cubecl-common", path = "../cubecl-common", version = "0.10.3", default-features = false, features = [
-    "fp4",
-    "fp8",
-] }
+cubecl-common = { package = "t4a-cubecl-common", path = "../cubecl-common", version = "0.10.3", default-features = false }
 cubecl-macros-internal = { package = "t4a-cubecl-macros-internal", path = "../cubecl-macros-internal", version = "0.10.3" }
 
 derive-new = { workspace = true }

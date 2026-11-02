@@ -38,6 +38,8 @@ pub mod config;
 
 pub use cubecl_common::benchmark;
 
+mod math;
+
 /// Logging utilities to be used by a compute server.
 pub mod logging;
 

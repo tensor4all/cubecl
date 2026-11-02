@@ -285,7 +285,9 @@ async fn process_request<K: AutotuneKey>(
             #[cfg(feature = "std")]
             durations.push(duration);
             #[cfg(not(feature = "std"))]
-            durations.push(core::time::Duration::from_micros(duration.as_micros()));
+            durations.push(core::time::Duration::from_micros(
+                u64::try_from(duration.as_micros()).unwrap_or(u64::MAX),
+            ));
         }
 
         results[index] = AutotuneResult::success(AutotuneOutcome::new(

@@ -12,9 +12,6 @@ use crate::{
     server::IoError,
     storage::{ComputeStorage, StorageHandle},
 };
-#[cfg(not(feature = "std"))]
-use num_traits::Float;
-
 use alloc::format;
 use alloc::string::{String, ToString};
 #[cfg(not(exclusive_memory_only))]
@@ -134,8 +131,8 @@ fn generate_bucket_sizes(
     alignment: u64,
 ) -> Vec<u64> {
     let mut buckets = Vec::with_capacity(max_buckets);
-    let log_min = (start_size as f64).ln();
-    let log_max = (end_size as f64).ln();
+    let log_min = crate::math::ln(start_size as f64);
+    let log_max = crate::math::ln(end_size as f64);
     let log_range = log_max - log_min;
 
     // Pure exponential performed best, but let's try slightly denser in lower-mid range
@@ -143,7 +140,7 @@ fn generate_bucket_sizes(
         let p = i as f64 / (max_buckets - 1) as f64;
         // Slight bias toward lower-mid range with less aggressive curve than sigmoid
         let log_size = log_min + log_range * p;
-        let size = log_size.exp() as u64;
+        let size = crate::math::exp(log_size) as u64;
         let aligned_size = size.next_multiple_of(alignment);
         buckets.push(aligned_size);
     }
@@ -277,9 +274,10 @@ impl<Storage: ComputeStorage> MemoryManagement<Storage> {
                 sizes
                     .iter()
                     .map(|&size| {
-                        let dealloc_period = (BASE_DEALLOC_PERIOD as f64
-                            * (1.0 + size as f64 / (DEALLOC_SCALE_MB as f64)).round())
-                            as u64;
+                        let dealloc_period = crate::math::round(
+                            BASE_DEALLOC_PERIOD as f64
+                                * (1.0 + size as f64 / (DEALLOC_SCALE_MB as f64)),
+                        ) as u64;
 
                         MemoryPoolOptions {
                             pool_type: PoolType::ExclusivePages {

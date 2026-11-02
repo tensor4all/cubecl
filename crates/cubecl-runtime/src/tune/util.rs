@@ -1,8 +1,5 @@
-use core::sync::atomic::{AtomicI32, Ordering};
-#[cfg(not(feature = "std"))]
-use num_traits::Float;
-
 use crate::config::{CubeClRuntimeConfig, RuntimeConfig};
+use core::sync::atomic::{AtomicI32, Ordering};
 
 /// Autotune levels:
 ///
@@ -27,8 +24,8 @@ pub fn anchor(x: usize, max: Option<usize>, min: Option<usize>, base: Option<usi
 
     let base = base.unwrap_or(2) as f64 * factor;
     let base = f64::max(base, 1.1); // Minimum base.
-    let exp = (x as f64).log(base).ceil();
-    let power = base.powf(exp).ceil() as usize;
+    let exp = crate::math::ceil(crate::math::log(x as f64, base));
+    let power = crate::math::ceil(crate::math::powf(base, exp)) as usize;
 
     let result = if let Some(max) = max {
         core::cmp::min(power, max)

@@ -9,8 +9,10 @@ use crate::{
 
 use super::Numeric;
 
+#[cfg(not(target_os = "none"))]
 mod fp4;
 mod fp6;
+#[cfg(not(target_os = "none"))]
 mod fp8;
 mod relaxed;
 mod tensor_float;

@@ -1,5 +1,8 @@
 use core::ops::Not;
-use cubecl_common::{e2m1, e2m1x2, e4m3, e5m2, ue8m0};
+#[cfg(not(target_os = "none"))]
+use cubecl_common::{e2m1, e2m1x2};
+#[cfg(not(target_os = "none"))]
+use cubecl_common::{e4m3, e5m2, ue8m0};
 use cubecl_ir::{Bitwise, Comparison, Operator};
 use half::{bf16, f16};
 
@@ -62,7 +65,14 @@ macro_rules! impl_unary_func {
 
 impl Exp for f32 {
     fn exp(self) -> Self {
-        self.exp()
+        #[cfg(not(target_os = "none"))]
+        {
+            f32::exp(self)
+        }
+        #[cfg(target_os = "none")]
+        {
+            num_traits::Float::exp(self)
+        }
     }
 }
 
@@ -210,9 +220,12 @@ impl_not!(
 );
 
 impl_abs_same_type!(
-    e2m1, e4m3, e5m2, ue8m0, f16, bf16, flex32, tf32, f32, f64, i8, i16, i32, i64, u8, u16, u32,
-    u64, usize, isize
+    f16, bf16, flex32, tf32, f32, f64, i8, i16, i32, i64, u8, u16, u32, u64, usize, isize
 );
+#[cfg(not(target_os = "none"))]
+impl_abs_same_type!(e2m1);
+#[cfg(not(target_os = "none"))]
+impl_abs_same_type!(e4m3, e5m2, ue8m0);
 impl_unary_func!(
     Exp,
     exp,
@@ -506,10 +519,6 @@ impl_unary_func_scalar_out!(
     VectorSum,
     vector_sum,
     Arithmetic::VectorSum,
-    e2m1,
-    e4m3,
-    e5m2,
-    ue8m0,
     f16,
     bf16,
     flex32,
@@ -671,14 +680,26 @@ impl<F: FloatBits> FloatBitsExpand for NativeExpand<F> {
     }
 }
 
+#[cfg(not(target_os = "none"))]
+impl VectorSum for e2m1 {}
+#[cfg(not(target_os = "none"))]
+impl VectorSum for e4m3 {}
+#[cfg(not(target_os = "none"))]
+impl VectorSum for e5m2 {}
+#[cfg(not(target_os = "none"))]
+impl VectorSum for ue8m0 {}
+
+#[cfg(not(target_os = "none"))]
 impl FloatBits for e2m1x2 {
     type Bits = u8;
 }
 
+#[cfg(not(target_os = "none"))]
 impl FloatBits for e5m2 {
     type Bits = u8;
 }
 
+#[cfg(not(target_os = "none"))]
 impl FloatBits for e4m3 {
     type Bits = u8;
 }

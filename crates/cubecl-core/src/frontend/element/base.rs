@@ -6,7 +6,11 @@ use crate::{
 };
 use alloc::{boxed::Box, vec::Vec};
 use core::marker::PhantomData;
-use cubecl_common::{e2m1, e2m1x2, e2m3, e3m2, e4m3, e5m2, flex32, tf32, ue8m0};
+#[cfg(not(target_os = "none"))]
+use cubecl_common::{e2m1, e2m1x2};
+use cubecl_common::{e2m3, e3m2, flex32, tf32};
+#[cfg(not(target_os = "none"))]
+use cubecl_common::{e4m3, e5m2, ue8m0};
 use cubecl_ir::{ManagedVariable, VectorSize};
 use cubecl_runtime::runtime::Runtime;
 use half::{bf16, f16};
@@ -317,12 +321,17 @@ from_const!(bf16);
 from_const!(flex32);
 from_const!(tf32);
 from_const!(f32);
+#[cfg(not(target_os = "none"))]
 from_const!(e2m1);
+#[cfg(not(target_os = "none"))]
 from_const!(e2m1x2);
 from_const!(e2m3);
 from_const!(e3m2);
+#[cfg(not(target_os = "none"))]
 from_const!(e4m3);
+#[cfg(not(target_os = "none"))]
 from_const!(e5m2);
+#[cfg(not(target_os = "none"))]
 from_const!(ue8m0);
 from_const!(bool);
 from_const!(num_complex::Complex<f32>);

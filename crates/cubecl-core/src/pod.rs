@@ -1,4 +1,8 @@
-use cubecl_common::{e2m1, e2m1x2, e4m3, e5m2, flex32, tf32, ue8m0};
+#[cfg(not(target_os = "none"))]
+use cubecl_common::{e2m1, e2m1x2};
+#[cfg(not(target_os = "none"))]
+use cubecl_common::{e4m3, e5m2, ue8m0};
+use cubecl_common::{flex32, tf32};
 use cubecl_ir::StorageType;
 
 use crate::{
@@ -333,6 +337,7 @@ impl CubeElement for tf32 {
     }
 }
 
+#[cfg(not(target_os = "none"))]
 impl CubeElement for e4m3 {
     fn type_name() -> &'static str {
         "e4m3"
@@ -359,6 +364,7 @@ impl CubeElement for e4m3 {
     }
 }
 
+#[cfg(not(target_os = "none"))]
 impl CubeElement for e5m2 {
     fn type_name() -> &'static str {
         "e5m2"
@@ -385,6 +391,7 @@ impl CubeElement for e5m2 {
     }
 }
 
+#[cfg(not(target_os = "none"))]
 impl CubeElement for ue8m0 {
     fn type_name() -> &'static str {
         "ue8m0"
@@ -411,6 +418,7 @@ impl CubeElement for ue8m0 {
     }
 }
 
+#[cfg(not(target_os = "none"))]
 impl CubeElement for e2m1x2 {
     fn type_name() -> &'static str {
         "e2m1x2"

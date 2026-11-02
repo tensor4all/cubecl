@@ -1,3 +1,7 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
+extern crate alloc;
+
 pub use cubecl_core::*;
 
 pub use cubecl_ir::features;

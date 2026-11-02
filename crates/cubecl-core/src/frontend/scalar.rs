@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 use cubecl::prelude::*;
+#[cfg(not(target_os = "none"))]
 use cubecl_common::{e4m3, e5m2, ue8m0};
 use serde::{Deserialize, Serialize};
 
@@ -63,9 +64,16 @@ impl InputScalar {
                     FloatKind::E2M1 | FloatKind::E2M3 | FloatKind::E3M2 => {
                         unimplemented!("fp6 CPU conversion not yet implemented")
                     }
+                    #[cfg(not(target_os = "none"))]
                     FloatKind::E4M3 => write::<e4m3>(val, &mut out.data),
+                    #[cfg(not(target_os = "none"))]
                     FloatKind::E5M2 => write::<e5m2>(val, &mut out.data),
+                    #[cfg(not(target_os = "none"))]
                     FloatKind::UE8M0 => write::<ue8m0>(val, &mut out.data),
+                    #[cfg(target_os = "none")]
+                    FloatKind::E4M3 | FloatKind::E5M2 | FloatKind::UE8M0 => {
+                        unimplemented!("fp8 CPU conversion is unavailable on bare-metal targets")
+                    }
                 },
                 ElemType::Int(int_kind) => match int_kind {
                     IntKind::I8 => write::<i8>(val, &mut out.data),

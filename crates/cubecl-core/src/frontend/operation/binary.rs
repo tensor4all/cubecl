@@ -11,7 +11,10 @@ use crate::{
     unexpanded,
 };
 use core::{cmp::Ordering, ops::*};
-use cubecl_common::{e2m1, e4m3, e5m2, ue8m0};
+#[cfg(not(target_os = "none"))]
+use cubecl_common::e2m1;
+#[cfg(not(target_os = "none"))]
+use cubecl_common::{e4m3, e5m2, ue8m0};
 use cubecl_ir::ClampOperator;
 use cubecl_macros::derive_expand;
 use half::{bf16, f16};
@@ -286,6 +289,15 @@ macro_rules! impl_binary_func {
         }
     }
 }
+
+#[cfg(not(target_os = "none"))]
+impl Remainder for e2m1 {}
+#[cfg(not(target_os = "none"))]
+impl Remainder for e4m3 {}
+#[cfg(not(target_os = "none"))]
+impl Remainder for e5m2 {}
+#[cfg(not(target_os = "none"))]
+impl Remainder for ue8m0 {}
 
 macro_rules! impl_binary_func_scalar_out {
     ($trait_name:ident, $method_name:ident, $operator:expr, $($type:ty),*) => {
@@ -593,10 +605,6 @@ impl_binary_func!(
     Remainder,
     rem,
     Arithmetic::Remainder,
-    e2m1,
-    e4m3,
-    e5m2,
-    ue8m0,
     f16,
     bf16,
     flex32,

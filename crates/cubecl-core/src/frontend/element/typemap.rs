@@ -29,6 +29,16 @@ use crate::{
 
 use super::*;
 
+// Preserve inherent std math while selecting libm-backed num_traits in no_std.
+macro_rules! float_method {
+    ($value:expr, $method:ident $(, $arg:expr)*) => {{
+        #[cfg(not(target_os = "none"))]
+        { f64::$method($value $(, $arg)*) }
+        #[cfg(target_os = "none")]
+        { num_traits::Float::$method($value $(, $arg)*) }
+    }};
+}
+
 #[allow(non_camel_case_types)]
 #[repr(transparent)]
 #[derive(Serialize, Debug, Display)]
@@ -584,28 +594,28 @@ impl<Marker: 'static> num_traits::Float for DynamicScalar<Marker> {
 
     fn floor(self) -> Self {
         match self.val {
-            ConstantValue::Float(val) => Self::from_f64(val.floor()),
+            ConstantValue::Float(val) => Self::from_f64(float_method!(val, floor)),
             _ => self,
         }
     }
 
     fn ceil(self) -> Self {
         match self.val {
-            ConstantValue::Float(val) => Self::from_f64(val.ceil()),
+            ConstantValue::Float(val) => Self::from_f64(float_method!(val, ceil)),
             _ => self,
         }
     }
 
     fn round(self) -> Self {
         match self.val {
-            ConstantValue::Float(val) => Self::from_f64(val.round()),
+            ConstantValue::Float(val) => Self::from_f64(float_method!(val, round)),
             _ => self,
         }
     }
 
     fn trunc(self) -> Self {
         match self.val {
-            ConstantValue::Float(val) => Self::from_f64(val.trunc()),
+            ConstantValue::Float(val) => Self::from_f64(float_method!(val, trunc)),
             _ => self,
         }
     }
@@ -660,28 +670,28 @@ impl<Marker: 'static> num_traits::Float for DynamicScalar<Marker> {
 
     fn powi(self, n: i32) -> Self {
         match self.val {
-            ConstantValue::Float(val) => Self::from_f64(val.powi(n)),
+            ConstantValue::Float(val) => Self::from_f64(float_method!(val, powi, n)),
             _ => self,
         }
     }
 
     fn powf(self, n: Self) -> Self {
         match self.val {
-            ConstantValue::Float(val) => Self::from_f64(val.powf(n.val.as_f64())),
+            ConstantValue::Float(val) => Self::from_f64(float_method!(val, powf, n.val.as_f64())),
             _ => self,
         }
     }
 
     fn sqrt(self) -> Self {
         match self.val {
-            ConstantValue::Float(val) => Self::from_f64(val.sqrt()),
+            ConstantValue::Float(val) => Self::from_f64(float_method!(val, sqrt)),
             _ => self,
         }
     }
 
     fn exp(self) -> Self {
         match self.val {
-            ConstantValue::Float(val) => Self::from_f64(val.exp()),
+            ConstantValue::Float(val) => Self::from_f64(float_method!(val, exp)),
             _ => self,
         }
     }
@@ -695,7 +705,7 @@ impl<Marker: 'static> num_traits::Float for DynamicScalar<Marker> {
 
     fn ln(self) -> Self {
         match self.val {
-            ConstantValue::Float(val) => Self::from_f64(val.ln()),
+            ConstantValue::Float(val) => Self::from_f64(float_method!(val, ln)),
             _ => self,
         }
     }
@@ -738,35 +748,35 @@ impl<Marker: 'static> num_traits::Float for DynamicScalar<Marker> {
     }
 
     fn hypot(self, other: Self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().hypot(other.val.as_f64()))
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), hypot, other.val.as_f64()))
     }
 
     fn sin(self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().sin())
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), sin))
     }
 
     fn cos(self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().cos())
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), cos))
     }
 
     fn tan(self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().tan())
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), tan))
     }
 
     fn asin(self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().asin())
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), asin))
     }
 
     fn acos(self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().acos())
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), acos))
     }
 
     fn atan(self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().atan())
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), atan))
     }
 
     fn atan2(self, other: Self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().atan2(other.val.as_f64()))
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), atan2, other.val.as_f64()))
     }
 
     fn sin_cos(self) -> (Self, Self) {
@@ -775,7 +785,7 @@ impl<Marker: 'static> num_traits::Float for DynamicScalar<Marker> {
     }
 
     fn exp_m1(self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().exp_m1())
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), exp_m1))
     }
 
     fn ln_1p(self) -> Self {
@@ -783,27 +793,27 @@ impl<Marker: 'static> num_traits::Float for DynamicScalar<Marker> {
     }
 
     fn sinh(self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().sinh())
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), sinh))
     }
 
     fn cosh(self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().cosh())
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), cosh))
     }
 
     fn tanh(self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().tanh())
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), tanh))
     }
 
     fn asinh(self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().asinh())
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), asinh))
     }
 
     fn acosh(self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().acosh())
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), acosh))
     }
 
     fn atanh(self) -> Self {
-        DynamicScalar::from_f64(self.val.as_f64().atanh())
+        DynamicScalar::from_f64(float_method!(self.val.as_f64(), atanh))
     }
 
     fn integer_decode(self) -> (u64, i16, i8) {
